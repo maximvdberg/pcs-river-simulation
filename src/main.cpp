@@ -4,7 +4,6 @@
 #include "print.hpp"
 
 
-
 int main() {
 
     Array<float, 3> arr = a_(1.6f,2,3.f);
