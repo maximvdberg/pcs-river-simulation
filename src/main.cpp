@@ -1,13 +1,14 @@
 #include <iostream>
 
+#include "array.hpp"
 #include "print.hpp"
+
+
 
 int main() {
 
-    print("cool", 4);
-    std::cout << "wow" << std::endl;
-
-
+    Array<float, 3> arr = a_(1.6f,2,3.f);
+    print("cool", arr);
 
     return 0;
 }

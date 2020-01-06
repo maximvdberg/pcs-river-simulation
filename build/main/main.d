@@ -133,6 +133,23 @@ build/main/main.o: src/main.cpp \
   /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/9.2.0/../../../../include/c++/9.2.0/bits/ostream.tcc \
   /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/9.2.0/../../../../include/c++/9.2.0/istream \
   /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/9.2.0/../../../../include/c++/9.2.0/bits/istream.tcc \
-  src/print.hpp \
+  src/array.hpp \
+  /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/9.2.0/../../../../include/c++/9.2.0/functional \
+  /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/9.2.0/../../../../include/c++/9.2.0/tuple \
+  /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/9.2.0/../../../../include/c++/9.2.0/utility \
+  /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/9.2.0/../../../../include/c++/9.2.0/bits/stl_relops.h \
+  /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/9.2.0/../../../../include/c++/9.2.0/array \
+  /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/9.2.0/../../../../include/c++/9.2.0/bits/uses_allocator.h \
+  /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/9.2.0/../../../../include/c++/9.2.0/bits/invoke.h \
+  /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/9.2.0/../../../../include/c++/9.2.0/bits/refwrap.h \
+  /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/9.2.0/../../../../include/c++/9.2.0/bits/std_function.h \
+  /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/9.2.0/../../../../include/c++/9.2.0/cmath \
+  /usr/include/math.h /usr/include/bits/math-vector.h \
+  /usr/include/bits/libm-simd-decl-stubs.h \
+  /usr/include/bits/flt-eval-method.h /usr/include/bits/fp-logb.h \
+  /usr/include/bits/fp-fast.h \
+  /usr/include/bits/mathcalls-helper-functions.h \
+  /usr/include/bits/mathcalls.h /usr/include/bits/mathcalls-narrow.h \
+  /usr/include/bits/iscanonical.h src/print.hpp \
   /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/9.2.0/../../../../include/c++/9.2.0/sstream \
   /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/9.2.0/../../../../include/c++/9.2.0/bits/sstream.tcc

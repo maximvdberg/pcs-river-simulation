@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include <functional>
@@ -405,75 +404,22 @@ struct CArray<T, Head> {
 
 // Stack array constructors.
 
-template<typename BaseType, unsigned Length, unsigned ...Tail>
-struct __StackArrayConstr {
-    constexpr __StackArrayConstr() : arr{} {}
-    typename TypeGetter<BaseType, Length, Tail...>::type arr[Length];
-};
 
-template<typename BaseType, unsigned Length>
-struct __StackArrayVectorConstr;
 
-#define ARRAY(...) \
-    template<typename BaseType, unsigned ...Tail> \
-    struct __StackArrayConstr<BaseType, VA_NARG(__VA_ARGS__), Tail...> { \
-        using Type = typename TypeGetter<BaseType, \
-            VA_NARG(__VA_ARGS__), Tail...>::type; \
-        constexpr __StackArrayConstr() : arr{} {} \
-        constexpr __StackArrayConstr( \
-            PREPEND(const Type&, __VA_ARGS__) ) : arr{__VA_ARGS__} {} \
-        Type arr[VA_NARG(__VA_ARGS__)]; \
-    }; \
-    template<typename BaseType> \
-    struct __StackArrayVectorConstr<BaseType, VA_NARG(__VA_ARGS__)> { \
-        constexpr __StackArrayVectorConstr() : APPEND({0}, __VA_ARGS__) {} \
-        constexpr __StackArrayVectorConstr( \
-            PREPEND(const BaseType&, __VA_ARGS__) ) \
-            : APPEND(}, INTERPOSITION({, __VA_ARGS__)) {} \
-        BaseType __VA_ARGS__; \
-        struct Index { enum { __VA_ARGS__ }; }; \
-    };  /*const BaseType& get( const unsigned& i ) const { \
-            switch(getIndex(i, VA_NARG(__VA_ARGS__))) { \
-                {APPEND(; nothing(), PREPEND(nothing();} case Index::, \
-                    INTERPOSITION(: {return, __VA_ARGS__))) ;} \
-            } \
-        } \
-        BaseType& get( const unsigned& i ) { \
-            switch(getIndex(i, VA_NARG(__VA_ARGS__))) { \
-                {APPEND(; nothing(), PREPEND(nothing();} case Index::, \
-                    INTERPOSITION(: {return, __VA_ARGS__))) ;} \
-            } \
-        } \
-        protected: static inline constexpr void nothing(){} \
-    };*/
-
-ARRAY(x)
-ARRAY(x, y)
-ARRAY(x, y, z) ARRAY(x, y, z, w)
-ARRAY(x, y, z, w, u) ARRAY(x, y, z, w, u, v)
-ARRAY(x, y, z, w, u, v, a, b)
-ARRAY(x, y, z, w, u, v, a, b, c)
-ARRAY(x, y, z, w, u, v, a, b, c, d)
-ARRAY(x, y, z, w, u, v, a, b, c, d, e)
-ARRAY(x, y, z, w, u, v, a, b, c, d, e, f)
-ARRAY(x, y, z, w, u, v, a, b, c, d, e, f, g)
-ARRAY(x, y, z, w, u, v, a, b, c, d, e, f, g, h)
-ARRAY(x, y, z, w, u, v, a, b, c, d, e, f, g, h, i)
-ARRAY(x, y, z, w, u, v, a, b, c, d, e, f, g, h, i, j)
-ARRAY(x, y, z, w, u, v, a, b, c, d, e, f, g, h, i, j, k)
-ARRAY(x, y, z, w, u, v, a, b, c, d, e, f, g, h, i, j, k, l)
-ARRAY(x, y, z, w, u, v, a, b, c, d, e, f, g, h, i, j, k, l, m)
-ARRAY(x, y, z, w, u, v, a, b, c, d, e, f, g, h, i, j, k, l, m, n)
-ARRAY(x, y, z, w, u, v, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o)
-ARRAY(x, y, z, w, u, v, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p)
-ARRAY(x, y, z, w, u, v, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q)
-#undef ARRAY
+template<unsigned... Unsigneds>
+constexpr unsigned uintProduct() {
+    unsigned p = 1;
+    unsigned arr[] = {Unsigneds...};
+    for (unsigned a : arr)
+        p *= a;
+    return p;
+}
 
 /**
     * The stack array Array implementation.
     */
 template<typename T, unsigned Head, unsigned ...Tail>
-struct __StackArray : __StackArrayConstr<T, Head, Tail...> {
+struct __StackArray {
     using BaseType = T;
     static constexpr unsigned length() { return Head; }
     static constexpr unsigned depth() { return sizeof...(Tail) + 1; }
@@ -487,7 +433,7 @@ struct __StackArray : __StackArrayConstr<T, Head, Tail...> {
     using TypeConv = ArrayBase<__StackArray<U, Head, Tail...>>;
 
     // Constructors
-    using __StackArrayConstr<BaseType, Head, Tail...>::__StackArrayConstr;
+    constexpr __StackArray() {}
 
     // C-array init.
     constexpr __StackArray( const typename
@@ -541,6 +487,8 @@ struct __StackArray : __StackArrayConstr<T, Head, Tail...> {
     inline const BaseType* c_arr() const {
         return (const BaseType*) this;
     }
+
+    typename TypeGetter<BaseType, Head, Tail...>::type arr[Head];
 };
 
 template<typename BaseType, unsigned Head, unsigned ...Tail>
@@ -846,7 +794,7 @@ R&& make_array( const ArrayBase<Impl>& init ) {
 template<typename ...Args>
 constexpr inline Array<std::common_type_t<Args...>, sizeof...(Args)>
 a_( Args&&... args ) {
-    return {std::forward<Args>(args)...};
+    return {{static_cast<std::common_type_t<Args...>>(std::forward<Args>(args))...}};
 }
 
 
@@ -859,7 +807,7 @@ a_( Args&&... args ) {
 template<typename Impl, typename R = decltype (\
     std::FUNC(*(typename Impl::BaseType*)(0)))> \
 constexpr typename Impl::template TypeConv<R> \
-FUNC( const overture::ArrayBase<Impl>& x  ) { \
+FUNC( const ArrayBase<Impl>& x  ) { \
     typename Impl::template TypeConv<R> a; \
     const unsigned s = a.size(); \
     for (unsigned i = 0; i < s; ++i) a.get(i) = FUNC(x.get(i)); \
@@ -870,10 +818,10 @@ FUNC( const overture::ArrayBase<Impl>& x  ) { \
 template<typename Impl1, typename Impl2 = Impl1, typename R = decltype ( \
     std::FUNC(*(typename Impl1::BaseType*)(0), \
                 *(typename Impl2::BaseType*)(0))), \
-    typename = std::enable_if_t<overture::hasCompatibleSize<Impl1, Impl2>>> \
+    typename = std::enable_if_t<hasCompatibleSize<Impl1, Impl2>>> \
 constexpr typename Impl1::template TypeConv<R> \
-FUNC( const overture::ArrayBase<Impl1>& x, \
-        const overture::ArrayBase<Impl2>& y ) { \
+FUNC( const ArrayBase<Impl1>& x, \
+        const ArrayBase<Impl2>& y ) { \
     typename Impl1::template TypeConv<R> a; \
     const unsigned s = a.size(); \
     for (unsigned i = 0; i < s; ++i) \
@@ -883,7 +831,7 @@ FUNC( const overture::ArrayBase<Impl1>& x, \
 template<typename Impl, typename U, typename R = decltype ( \
     std::FUNC(*(typename Impl::BaseType*)(0), *(U*)(0)))> \
 constexpr typename Impl::template TypeConv<R> \
-FUNC( const overture::ArrayBase<Impl>& x, U y ) { \
+FUNC( const ArrayBase<Impl>& x, U y ) { \
     typename Impl::template TypeConv<R> a; \
     const unsigned s = a.size(); \
     for (unsigned i = 0; i < s; ++i) \
