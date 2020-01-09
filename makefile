@@ -9,7 +9,9 @@ BUILD_DIR := build
 
 # Source files.
 SRC_DIR := src
-SRC_FILES := $(wildcard $(SRC_DIR)/*.cpp)
+SRC_FILES := $(wildcard $(SRC_DIR)/*.cpp) \
+			 $(wildcard $(SRC_DIR)/sdl/*.cpp) \
+			 $(wildcard $(SRC_DIR)/opengl/*.cpp)
 
 
 #OPTIMISE_FLAGS = -O3 -flto -g3
@@ -18,7 +20,7 @@ OPTIMISE_FLAGS = -O0 -g3
 COMPILER_FLAGS = -std=c++14 $(OPTIMISE_FLAGS) -MD \
 				-Wall \
 				-I"$(SRC_DIR)/overture/include" \
-				`sdl2-config --cflags` \
+				`sdl2-config --cflags`
 
 
 LINKER_FLAGS = `sdl2-config --cflags --libs` \
