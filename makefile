@@ -11,7 +11,9 @@ BUILD_DIR := build
 SRC_DIR := src
 SRC_FILES := $(wildcard $(SRC_DIR)/*.cpp) \
 			 $(wildcard $(SRC_DIR)/sdl/*.cpp) \
-			 $(wildcard $(SRC_DIR)/opengl/*.cpp)
+			 $(wildcard $(SRC_DIR)/opengl/*.cpp) \
+			 $(wildcard $(SRC_DIR)/lbm/*.cpp)
+
 
 
 #OPTIMISE_FLAGS = -O3 -flto -g3

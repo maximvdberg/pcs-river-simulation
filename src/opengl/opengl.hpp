@@ -102,6 +102,12 @@ namespace pcs {
          */
         void setRenderColor( float r = 1.f, float g = 1.f, float b = 1.f, float a = 1.f);
 
+        /**
+         * Update the model matrix in the current program.
+         *
+         * @param matrix The model matrix.
+         */
+        void setModelMatrix( const float matrix[16]);
 
         /**
          * Render a texture to the current target. This function render the
@@ -119,13 +125,28 @@ namespace pcs {
                             float width, float height );
 
         /**
+         * Render a rectangle to the current target. This function just calls
+         * renderTexture() with a blank white texture.
+         *
+         * @see renderTexture()
+         * @param posX The x position to render the texture to.
+         * @param posY The y position to render the texture to.
+         * @param width The width to render the texture.
+         * @param height The height to render the texture.
+         */
+        inline void renderRectangle( float posX, float posY,
+                                     float width, float height ) {
+            renderTexture(getBlankTexture(), posX, posY, width, height);
+        }
+
+        /**
          * Render a model to the current target, positioned by the model
          * transformation matrix 'modelmatrix'.
          *
          * @param model The model to render.
          * @param modelMatrix The 4x4 matrix specifying the model matrix.
          */
-        void renderModel( const Model& model, const float modelmatrix[16] );
+        void renderModel( const Model& model );
 
 
         /**
@@ -144,6 +165,19 @@ namespace pcs {
 
 
         /**
+         * Use the OpenGL program specified by 'program'.
+         *
+         * @param program The program to use.
+         */
+        void useProgram( GLuint program );
+
+        /**
+         * Set the OpenGL program back to the default rendering program.
+         */
+        void resetProgram();
+
+
+        /**
          * Get a default blank texture.
          *
          * @return A texture ID for a blank texture.
@@ -151,6 +185,16 @@ namespace pcs {
         inline GLuint getBlankTexture() {
             return blankTexture;
         }
+
+        /**
+         * Get a default square model.
+         *
+         * @return The a square model object.
+         */
+        inline Model& getSquareModel() {
+            return squareModel;
+        }
+
 
     private:
 

@@ -11,17 +11,18 @@
 
 #include "opengl.hpp"
 
-#include <string>
-#include <fstream>
 #include "../print.hpp"
 
 using namespace pcs;
 
+#include <sstream>
+#include <fstream>
+
 
 std::string loadFile( const std::string& path ) {
     std::ifstream file(path);
+    std::stringstream buffer;
     if (file) {
-        std::stringstream buffer;
         buffer << file.rdbuf();
         return buffer.str();
     }
@@ -31,11 +32,12 @@ std::string loadFile( const std::string& path ) {
     }
 }
 
+
 GLRenderer::GLRenderer() {
 
     // Compile the rendering program.
-    program = gl::compileProgram(loadFile("src/shaders/vertex.shader"),
-                                 loadFile("src/shaders/main_fragment.shader"));
+    program = gl::compileProgram(loadFile("src/shaders/main.vert"),
+                                 loadFile("src/shaders/main.frag"));
 
     // Bind the attribute and uniform locations of the program, so
     // that we can edit them from C++.
@@ -134,6 +136,10 @@ void GLRenderer::setRenderColor( float r, float g, float b, float a ) {
     glUniform4f(u_color, r, g, b, a);
 }
 
+void GLRenderer::setModelMatrix( const float matrix[16] ) {
+    glUniformMatrix4fv(u_model_matrix, 1, true, matrix);
+}
+
 
 void GLRenderer::renderTexture( GLuint texture,
                                 float posX, float posY,
@@ -146,19 +152,17 @@ void GLRenderer::renderTexture( GLuint texture,
        0.f, 0.f, 1.f, 0.f,
        0.f, 0.f, 0.f, 1.f,
     };
+    setModelMatrix(modelMatrix);
 
     // Bind the texture to binding point 0.
     glActiveTexture(GL_TEXTURE0 + 0);
     glBindTexture(GL_TEXTURE_2D, texture);
 
     // Render the model.
-    renderModel(squareModel, modelMatrix);
+    renderModel(squareModel);
 }
 
-void GLRenderer::renderModel( const Model& model, const float modelmatrix[16] ) {
-
-    // Update the model matrix.
-    glUniformMatrix4fv(u_model_matrix, 1, true, modelmatrix);
+void GLRenderer::renderModel( const Model& model ) {
 
     // Bind the VAO (and the VBO and IBO with it).
     glBindVertexArray(model.vao);
@@ -170,15 +174,26 @@ void GLRenderer::renderModel( const Model& model, const float modelmatrix[16] ) 
 
 void GLRenderer::renderToTexture( GLuint textureTarget, int attachment ) {
     // Bind the multipurpose framebuffer and attach the texture.
-    glBindFramebuffer(GL_FRAMEBUFFER, multipurposeFBO);
+    if (attachment == 0)
+        glBindFramebuffer(GL_FRAMEBUFFER, multipurposeFBO);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment,
-                            GL_TEXTURE_2D, textureTarget, 0);
+                           GL_TEXTURE_2D, textureTarget, 0);
 }
 
 void GLRenderer::renderToScreen() {
     // Bind back to the window frambuffer.
     glBindFramebuffer(GL_FRAMEBUFFER, windowFBO);
 }
+
+
+void GLRenderer::useProgram( GLuint program_ ) {
+    glUseProgram(program_);
+}
+
+void GLRenderer::resetProgram() {
+    glUseProgram(program);
+}
+
 
 
 GLuint gl::compileShader( const std::string& source, GLenum type ) {

@@ -18,6 +18,8 @@
 #include "sdl/input.hpp"
 #include "opengl/opengl.hpp"
 
+#include "lbm/lbm.hpp"
+
 using namespace pcs;
 
 
@@ -38,8 +40,10 @@ int main() {
     const int width = 500, height = 500;
     GLuint texture1 = gl::genTexture(width, height);
     renderer.renderToTexture(texture1);
-    renderer.clear(1.0f);
+    renderer.clear(1.f, 0.f, 0.f);
     renderer.renderToScreen();
+
+    LatticeBoltzmann boltzmann = LatticeBoltzmann(renderer);
 
     // We now update untill the window gets closed.
     while (!input.quit) {
@@ -49,25 +53,25 @@ int main() {
 
         // Update the viewport if the window size has changed.
         if (input.windowSizeChanged) {
+            input.windowSizeChanged = false;
             SDL_GL_GetDrawableSize(window.sdlData, &window.width, &window.height);
             renderer.updateViewport(window.width, window.height);
-            print(window.width, window.height);
         }
 
         // Clear the screen so we can draw the new frame.
         renderer.clear(0.f, 0.f, 0.5f, 1.f);
 
         // Draw some stuff.
-        renderer.setRenderColor(0.2f, 0.2f, 0.2f, 1.0f);
         renderer.renderToTexture(texture1);
+        renderer.updateViewport(width, height);
         renderer.clear(0.5f, 0.f, 0.f, 1.0f);
         renderer.setRenderColor(0.4f, .8f, 3.f, 1.f);
         renderer.renderTexture(renderer.getBlankTexture(),
                                100, 100, 200, 200);
         renderer.renderToScreen();
+        renderer.updateViewport(window.width, window.height);
         renderer.renderTexture(renderer.getBlankTexture(),
                         100, 100, 200, 200);
-
 
         // Draw some stuff.
         static int posX, posY;
@@ -80,10 +84,13 @@ int main() {
                                posX,  posY, 500, 500);
 
 
+        boltzmann.update(renderer, input, window.width, window.height);
+
         // Swap the buffer we have rendered to with the display buffer.
         SDL_GL_SwapWindow(window.sdlData);
     }
 
+    boltzmann.close();
     renderer.close();
     destroyWindow(window);
     print("~end~");
