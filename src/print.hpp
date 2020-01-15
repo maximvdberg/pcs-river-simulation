@@ -1,6 +1,18 @@
+/**
+ * Here generic template toString and print functions are supplied, for easy
+ * printing of any data type. This file was not orginally created for this
+ * project, and is only used here for convenience.
+ *
+ * @file print.hpp
+ * @author Jurriaan van den Berg
+ * @copyright? Jurriaan van den Berg 2020 ?
+ */
+
 #pragma once
 
 #include <sstream>
+#include <iostream>
+
 
 template <typename...>
 using void_t = void;
@@ -31,7 +43,7 @@ std::string toString( const T& value ) {
     return ss.str();
 }
 
-// Specialization for std::pair.
+// Specialization of toString for std::pair.
 template <typename T, typename U>
 std::string toString( const std::pair<T, U>& pair ) {
     std::stringstream ss;
@@ -40,7 +52,7 @@ std::string toString( const std::pair<T, U>& pair ) {
     return ss.str();
 }
 
-// Specialization for iterables.
+// Specialization of toString  for iterables.
 template <typename T, typename std::enable_if_t<printIterable<T>, int> = 0>
 std::string toString( const T& it ) {
     std::stringstream ss;
