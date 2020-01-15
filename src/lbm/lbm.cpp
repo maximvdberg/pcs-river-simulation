@@ -9,7 +9,7 @@ LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer ) {
     height = 500;
     frame = 0;
 
-    programId = gl::compileProgram(loadFile("src/shaders/main.vert"),
+    programId = gl::compileProgram(loadFile("src/opengl/main.vert"),
                                    loadFile("src/lbm/stream.frag"));
 
     u_textures[0] = glGetUniformLocation(programId, "u_textures");

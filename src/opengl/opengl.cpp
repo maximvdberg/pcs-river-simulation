@@ -36,8 +36,8 @@ std::string loadFile( const std::string& path ) {
 GLRenderer::GLRenderer() {
 
     // Compile the rendering program.
-    program = gl::compileProgram(loadFile("src/shaders/main.vert"),
-                                 loadFile("src/shaders/main.frag"));
+    program = gl::compileProgram(loadFile("src/opengl/main.vert"),
+                                 loadFile("src/opengl/main.frag"));
 
     // Bind the attribute and uniform locations of the program, so
     // that we can edit them from C++.
