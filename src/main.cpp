@@ -45,6 +45,7 @@ int main() {
 
     LatticeBoltzmann boltzmann = LatticeBoltzmann(renderer);
 
+
     // We now update untill the window gets closed.
     while (!input.quit) {
 

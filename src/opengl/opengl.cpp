@@ -55,7 +55,7 @@ GLRenderer::GLRenderer() {
     glGenFramebuffers(1, &multipurposeFBO);
 
     // Generate a 1x1 blank texture, used for rendering texturesless rects.
-    blankTexture = gl::genTexture(1, 1, (uint8_t[]) {0xFF, 0xFF, 0xFF, 0xFF});
+    blankTexture = gl::genTexture(1, 1, (float[]) {1.0f, 1.0f, 1.0f, 1.0f});
 
     // Create a square model used for rendering simple textures.
     glGenVertexArrays(1, &squareModel.vao);
@@ -279,7 +279,7 @@ GLuint gl::compileProgram( const std::string& vertexSource,
 }
 
 
-GLuint gl::genTexture( int width, int height, const uint8_t* data ) {
+GLuint gl::genTexture( int width, int height, const float* data ) {
 
     // Generate the texture and bind it.
     GLuint textureId;
@@ -293,7 +293,7 @@ GLuint gl::genTexture( int width, int height, const uint8_t* data ) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
     // Send the image to OpenGL.
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, data);
     //GL_RGBA32F
 
     // Unbind the texture.

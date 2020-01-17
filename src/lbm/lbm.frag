@@ -10,9 +10,10 @@ layout(location = 3) uniform sampler2D u_textures[3];
 
 
 // Some constants.
-const float viscosity = 0.02;                    // viscosity
-const float omega = 1 / (3*0.02 + 0.5);     // parameter for "relaxation"
+const float viscosity = 0.2;                    // viscosity
+const float omega = 1 / (3*0.04 + 0.5);     // parameter for "relaxation"
 const float u0 = 0.1;                            // initial and in-flow speed
+const float c = 1.0;
 
 // Flow directions.
 // const ivec2 e[9] = {ivec2(0, 0),  ivec2(1, 0),   ivec2(0, 1),
@@ -25,7 +26,9 @@ const vec2 e[9] = {vec2(0, 0),  vec2(1, 0),   vec2(0, 1),
 
 
 // Flow weights.
-const float w[3] = {4.0 / 9.0, 1.0 / 9.0, 1.0 / 36.0};
+const float w[9] = {4.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0,
+                    1.0 / 9.0, 1.0 / 9.0, 1.0 / 36.0,
+                    1.0 / 36.0, 1.0 / 36.0, 1.0 / 36.0};
 
 
 
@@ -33,99 +36,110 @@ ivec2 pmod( ivec2 i, ivec2 n ) {
     return ivec2(mod(mod(i, n) + n, n));
 }
 
+float rand(vec2 co){
+    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
+
 void main() {
 
-    ivec2 texture_size = textureSize(u_textures[0], 0);
-    ivec2 texture_loc = ivec2(v_tex_coords * vec2(texture_size - ivec2(1)) + vec2(0.5));
-    vec2 pixel_size = 1.0 / texture_size;
+    const ivec2 texture_size = textureSize(u_textures[0], 0);
+    const ivec2 texture_loc = ivec2(v_tex_coords * vec2(texture_size - ivec2(1)) + vec2(0.5));
+    const vec2 pixel_size = 1.0 / texture_size;
 
-    o_color[0] = texture(u_textures[0], v_tex_coords);
-    o_color[1] = texture(u_textures[1], v_tex_coords);
-    o_color[2] = texture(u_textures[2], v_tex_coords);
+    float f[9];
+    vec4 texture0 = texture(u_textures[0], v_tex_coords);
 
-    // Stream:
-    o_color[0]   = texture(u_textures[0], v_tex_coords);              // f0 + rest
-    o_color[1].r = texture(u_textures[1], v_tex_coords - pixel_size*e[1]).r; // f1
-    o_color[1].g = texture(u_textures[1], v_tex_coords - pixel_size*e[2]).g; // f2
-    o_color[1].b = texture(u_textures[1], v_tex_coords - pixel_size*e[3]).b; // f3
-    o_color[1].a = texture(u_textures[1], v_tex_coords - pixel_size*e[4]).a; // f4
-    o_color[2].r = texture(u_textures[2], v_tex_coords - pixel_size*e[5]).r; // f5
-    o_color[2].g = texture(u_textures[2], v_tex_coords - pixel_size*e[6]).g; // f6
-    o_color[2].b = texture(u_textures[2], v_tex_coords - pixel_size*e[7]).b; // f7
-    o_color[2].a = texture(u_textures[2], v_tex_coords - pixel_size*e[8]).a; // f8
-
-    // // Stream:
-    // o_color[0] = texture(u_textures[0], v_tex_coords); // f0 + rest
-    // o_color[1].r = texelFetch(u_textures[1], pmod(texture_loc - e[1], texture_size), 0).r; // f1
-    // o_color[1].g = texelFetch(u_textures[1], pmod(texture_loc - e[2], texture_size), 0).g; // f2
-    // o_color[1].b = texelFetch(u_textures[1], pmod(texture_loc - e[3], texture_size), 0).b; // f3
-    // o_color[1].a = texelFetch(u_textures[1], pmod(texture_loc - e[4], texture_size), 0).a; // f4
-    // o_color[2].r = texelFetch(u_textures[2], pmod(texture_loc - e[5], texture_size), 0).r; // f5
-    // o_color[2].g = texelFetch(u_textures[2], pmod(texture_loc - e[6], texture_size), 0).g; // f6
-    // o_color[2].b = texelFetch(u_textures[2], pmod(texture_loc - e[7], texture_size), 0).b; // f7
-    // o_color[2].a = texelFetch(u_textures[2], pmod(texture_loc - e[8], texture_size), 0).a; // f8
+    // Stream.
+    f[0] = texture0.a;                                        // f0 + rest
+    f[1] = texture(u_textures[1], v_tex_coords - pixel_size*e[1]).r; // f1
+    f[2] = texture(u_textures[1], v_tex_coords - pixel_size*e[2]).g; // f2
+    f[3] = texture(u_textures[1], v_tex_coords - pixel_size*e[3]).b; // f3
+    f[4] = texture(u_textures[1], v_tex_coords - pixel_size*e[4]).a; // f4
+    f[5] = texture(u_textures[2], v_tex_coords - pixel_size*e[5]).r; // f5
+    f[6] = texture(u_textures[2], v_tex_coords - pixel_size*e[6]).g; // f6
+    f[7] = texture(u_textures[2], v_tex_coords - pixel_size*e[7]).b; // f7
+    f[8] = texture(u_textures[2], v_tex_coords - pixel_size*e[8]).a; // f8
 
 
     // Collide:
-    float rho = o_color[0].a + o_color[1].r + o_color[1].g +
-                o_color[1].b + o_color[1].a + o_color[2].r +
-                o_color[2].g + o_color[2].b + o_color[2].a;
+    float rho = 0.0;
+    for (int i = 0; i < 9; i++) {
+        rho += f[i];
+    }
 
-    const float c = 1.f;
+    vec2 u = vec2(0.0);
+    for (int i = 1; i < 9; i++) {
+        u += e[i] * f[i];
+    }
+    u *= c / rho;
 
-    vec2 u =  c / rho * (         e[1]*o_color[1].r + e[2]*o_color[1].g +
-              e[3]*o_color[1].b + e[4]*o_color[1].a + e[5]*o_color[2].r +
-              e[6]*o_color[2].g + e[7]*o_color[2].b + e[8]*o_color[2].a);
 
-    vec2 u2 = u * u;
-    float omu215 = 1 - 1.5 * (u2.x + u2.y); // one minus u2 times 1.5
-    float omg = 1 - omega;
+    float udotu = 1.5 * dot(u, u) / (c * c);
 
-    o_color[0].a = (1-omega)*o_color[0].a + omega*w[0]*rho*(omu215); // f0
-    o_color[1].r = (1-omega)*o_color[1].r + omega*w[1]*rho*(omu215 + 3.*dot(e[1], u) + 4.5*pow(dot(e[1], u), 2)); // f1
-    o_color[1].g = (1-omega)*o_color[1].g + omega*w[1]*rho*(omu215 + 3.*dot(e[2], u) + 4.5*pow(dot(e[2], u), 2)); // f2
-    o_color[1].b = (1-omega)*o_color[1].b + omega*w[1]*rho*(omu215 + 3.*dot(e[3], u) + 4.5*pow(dot(e[3], u), 2)); // f3
-    o_color[1].a = (1-omega)*o_color[1].a + omega*w[1]*rho*(omu215 + 3.*dot(e[4], u) + 4.5*pow(dot(e[4], u), 2)); // f8
-    o_color[2].r = (1-omega)*o_color[2].r + omega*w[2]*rho*(omu215 + 3.*dot(e[5], u) + 4.5*pow(dot(e[5], u), 2)); // f4
-    o_color[2].g = (1-omega)*o_color[2].g + omega*w[2]*rho*(omu215 + 3.*dot(e[6], u) + 4.5*pow(dot(e[6], u), 2)); // f5
-    o_color[2].b = (1-omega)*o_color[2].b + omega*w[2]*rho*(omu215 + 3.*dot(e[7], u) + 4.5*pow(dot(e[7], u), 2)); // f6
-    o_color[2].a = (1-omega)*o_color[2].a + omega*w[2]*rho*(omu215 + 3.*dot(e[8], u) + 4.5*pow(dot(e[8], u), 2)); // f7
+    for (int i = 0; i < 9; i++) {
+        float edotu_c = 3.0*dot(e[i], u) / c;
+        float s = w[i] * (edotu_c + pow(edotu_c, 2)/2 - udotu);
 
+        float feq = w[i] * rho + rho * s;
+
+        f[i] -= omega * (f[i] - feq);
+        if (f[i] < 0.0) {
+            f[i] = 0.0;
+        }
+    }
 
     // Boundary:
-    bool isWall = o_color[0].r != 0.0;
+    bool isWall = texture0.r != 0.0;
 
     // Bounce-back.
     if (isWall) {
-        float f1 = o_color[1].r;
-        float f2 = o_color[1].g;
-        float f5 = o_color[2].r;
-        float f6 = o_color[2].g;
+        float f2c = f[2]; // N
+        float f3c = f[3]; // W
+        float f6c = f[6]; // NW
+        float f7c = f[7]; // SW
 
-        o_color[1].r = o_color[1].b;
-        o_color[1].g = o_color[1].a;
-        o_color[1].b = f1;
-        o_color[1].a = f2;
+        f[2] = f[4]; // N -> S
+        f[3] = f[1]; // W -> E
+        f[4] = f2c;  // S -> N
+        f[1] = f3c;  // E -> W
 
-        o_color[2].r = o_color[2].b;
-        o_color[2].g = o_color[2].a;
-        o_color[2].b = f5;
-        o_color[2].a = f6;
+        f[6] = f[8]; // NW -> SE
+        f[7] = f[5]; // SW -> NE
+        f[8] = f6c;  // SE -> NW
+        f[5] = f7c;  // NE -> SW
+
+        // TODO: Implement afbraak
+        if (length(u) > rand(u) + 0.001)
+            texture0.r = 0.0;
+
+        //texture0.g = rand(u);
+    }
+    else {
+        if (length(u) < 0.001) {
+            if (rand(u) < 0.1) {
+                texture0.r = 1.0;
+            }
+        }
+
     }
 
     // Flow from the right.
-    if (texture_loc.x == 1) {
+    if (texture_loc.x == 0) {
        float u02 = pow(u0, 2);
-       // o_color[0].a = 0.0; // 0
-       o_color[1].r = w[1]*(1 + 3*u0 + 4.5*u02 - 1.5*u02); // E
-       // o_color[1].g = 0.0; // N
-       o_color[1].b = w[1]*(1 - 3*u0 + 4.5*u02 - 1.5*u02); // W
-       o_color[1].a = w[1]*(1 - 3*u0 + 4.5*u02 - 1.5*u02); // S
-       o_color[2].r = w[2]*(1 + 3*u0 + 4.5*u02 - 1.5*u02); // NE
-       o_color[2].g = w[2]*(1 - 3*u0 + 4.5*u02 - 1.5*u02); // NW
-       o_color[2].b = w[2]*(1 - 3*u0 + 4.5*u02 - 1.5*u02); // SW
-       o_color[2].a = w[2]*(1 + 3*u0 + 4.5*u02 - 1.5*u02); // SE
+       f[0] = 0.0; // 0
+       f[1] = w[1]*(1 + 3*u0 + 4.5*u02 - 1.5*u02); // E
+       f[2] = 0.0; // N
+       f[3] = w[3]*(1 - 3*u0 + 4.5*u02 - 1.5*u02); // W
+       f[4] = w[4]*(1 - 3*u0 + 4.5*u02 - 1.5*u02); // S
+       f[5] = w[5]*(1 + 3*u0 + 4.5*u02 - 1.5*u02); // NE
+       f[6] = w[6]*(1 - 3*u0 + 4.5*u02 - 1.5*u02); // NW
+       f[7] = w[7]*(1 - 3*u0 + 4.5*u02 - 1.5*u02); // SW
+       f[8] = w[8]*(1 + 3*u0 + 4.5*u02 - 1.5*u02); // SE
     }
 
-    //o_color[1] = vec4(2.0, 0.5, 0.6, 1.2);
+
+    // Output the colors.
+    o_color[0] = vec4(texture0.rgb, f[0]);
+    o_color[1] = vec4(f[1], f[2], f[3], f[4]);
+    o_color[2] = vec4(f[5], f[6], f[7], f[8]);
 }

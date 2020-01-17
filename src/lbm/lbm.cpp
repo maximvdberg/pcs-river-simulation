@@ -65,10 +65,10 @@ LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer ) {
     renderer.clear(0.10944444444444444, 0.14777777777777779,
                    0.0811111111111111, 0.10944444444444444);
 
-
     renderer.renderToTexture(buffers[0].texture[2]);
     renderer.clear(0.036944444444444446, 0.020277777777777777,
                    0.020277777777777777, 0.036944444444444446);
+
 
     renderer.renderToScreen();
 
@@ -89,12 +89,40 @@ void LatticeBoltzmann::close() {
 void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
                                int windowWidth, int windowHeight ) {
 
-    if (!input.keyMap[SDL_SCANCODE_P] || input.keyMap[SDL_SCANCODE_F] == 2) {
+    static bool paused = false;
+    if (input.keyMap[SDL_SCANCODE_P] == 2) {
+        paused = !paused;
+    }
+
+    if (!paused|| input.keyMap[SDL_SCANCODE_F] == 2) {
 
         renderer.useProgram(programs[0]);
         renderer.updateViewport(width, height);
         renderer.setModelMatrix(0.f, 0.f, width, height);
-        for (unsigned i = 0; i < 10; ++i) {
+
+        for (unsigned i = 0; i < 20; ++i) {
+
+            // // Some debug stuff, please ignore.
+            // float img[1000*500*4];
+            // glBindTexture(GL_TEXTURE_2D, buffers[frame % 2].texture[0]);
+            // glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, (GLvoid*) img);
+            // glBindTexture(GL_TEXTURE_2D, 0);
+
+            // float min = 123456.f, max = 0.f;
+            // for (size_t i = 0; i < 1000*500*4; i++) {
+            //     min = img[i] < min ? img[i] : min;
+            //     max = img[i] > max ? img[i] : max;
+            //     if (img[i] <= 0.f) {
+            //         int j = i - i % 4;
+            //         //print(j, img[j], img[j+1], img[j+2], img[j+3]);
+            //     }
+            // }
+            // print(img[0], img[1], img[2], img[3]);
+            // if (min < 0.f) {
+            //     print(min, max);
+            //     paused = true;
+            //     break;
+            // }
 
             // Bind the textures from which we render, and bind to
             // framebuffer to which we rander.
@@ -113,19 +141,6 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
 
         }
 
-        // Some debug stuff, please ignore.
-        //float img[500*500*4];
-        //glBindTexture(GL_TEXTURE_2D, buffers[frame % 2].texture[1]);
-        //glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, (GLvoid*) img);
-        //print(img[0], img[1], img[2], img[3]);
-        //glBindTexture(GL_TEXTURE_2D, 0);
-        //float min = 123456.f, max = 0.f;
-        //for (size_t i = 0; i < 500*500*4; i++) {
-        //    min = img[i] < min ? img[i] : min;
-        //    max = img[i] > max ? img[i] : max;
-        //}
-        //print(min, max);
-
         // Render the results.
         renderer.resetProgram();
     }
@@ -141,7 +156,7 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
 
     renderer.renderToScreen();
 
-    bool debugRender = false;
+    bool debugRender = true;
     if (debugRender) {
         float posX = 10.f, posY = 600.f;
         renderer.setRenderColor(1.f, 1.f, 1.f, 1.f);
@@ -150,26 +165,33 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
                             posX, posY, width, height);
         gl::checkErrors("CA ads");
 
-        posX = 600.f; posY = 10.f;
+        posX = 1100.f; posY = 10.f;
         renderer.setRenderColor(1.f, 1.f, 1.f, 1.f);
         renderer.renderTexture(buffers[frame % 2].texture[1],
                             posX, posY, width, height);
 
-        posX = 600.f; posY = 600.f;
+        posX = 1100.f; posY = 600.f;
         renderer.setRenderColor(1.f, 1.f, 1.f, 1.f);
         renderer.renderTexture(buffers[frame % 2].texture[2],
                             posX, posY, width, height);
 
     }
 
-    // Visualise the output
-    renderer.useProgram(programs[1]);
-    renderer.updateViewport(windowWidth, windowHeight);
-    renderer.setRenderColor(1.f, 1.f, 1.f, 1.f);
-    glBindTextures(0, 3, buffers[frame % 2].texture);
-    renderer.setModelMatrix(10.f, 10.f, width, height);
-    renderer.renderModel(renderer.getSquareModel());
+    if (true) {
+        // Visualise the output
+        renderer.useProgram(programs[1]);
+        renderer.updateViewport(windowWidth, windowHeight);
+        renderer.setRenderColor(1.f, 1.f, 1.f, 1.f);
+        glBindTextures(0, 3, buffers[frame % 2].texture);
+        renderer.setModelMatrix(10.f, 10.f, width, height);
+        renderer.renderModel(renderer.getSquareModel());
 
-    renderer.resetProgram();
+        // renderer.setModelMatrix(10.f+width, 10.f, width, height);
+        // renderer.renderModel(renderer.getSquareModel());
+        // renderer.setModelMatrix(10.f, 10.f+height, width, height);
+        // renderer.renderModel(renderer.getSquareModel());
+
+        renderer.resetProgram();
+    }
     gl::checkErrors("CA end");
 }

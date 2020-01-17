@@ -39,5 +39,9 @@ void main() {
 
         o_color = vec4(u_color.rgb * length(u) * 2.0, u_color.a);
 
+
+        // o_color = vec4(u_color.rgb * rho * 0.2, u_color.a);
+
+
     }
 }

@@ -257,7 +257,7 @@ namespace pcs {
         /**
          * Generate an OpenGL texture of width 'width' and height 'height'.
          * Pixel data can be supplied by setting 'data', and must be formated
-         * as an uint8 per color in RGBA format, so 4 uint8s per pixel.
+         * as an float per color in RGBA format, so 4 float per pixel.
          *
          * @param width The width of the texture.
          * @param height The height of the texture.
@@ -265,7 +265,7 @@ namespace pcs {
          *             pixel data, formatted RGBA.
          * @return The texture id, or 0 if the generation has failed.
          */
-        GLuint genTexture( int width, int height, const uint8_t* data = nullptr );
+        GLuint genTexture( int width, int height, const float* data = nullptr );
 
         /**
          * Check and print any OpenGL errors that may have occured. An
