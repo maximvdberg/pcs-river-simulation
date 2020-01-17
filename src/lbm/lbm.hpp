@@ -18,15 +18,18 @@ namespace pcs {
 
         void close();
 
-        void update( GLRenderer& renderer, InputData& input, int width, int height );
+        void update( GLRenderer& renderer, InputData& input,
+                     int width, int height );
 
         int width, height;
 
-        GLuint programId;
+        GLuint programs[2]; // {<stream>, <collide>, <boundary>, <visual>}
+        GLuint boundaryProgram;
+
         GLuint u_textures[3];
 
         Buffers buffers[2];
 
-        int frame;
+        unsigned frame;
     };
 }

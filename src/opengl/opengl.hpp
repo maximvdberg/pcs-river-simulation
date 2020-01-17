@@ -110,6 +110,11 @@ namespace pcs {
         void setModelMatrix( const float matrix[16]);
 
         /**
+         * TODO
+         */
+        void setModelMatrix( float posX, float posY, float width, float height);
+
+        /**
          * Render a texture to the current target. This function render the
          * texture specified by 'texture' to the position ('posX', 'posY')
          * with size ('width', 'height').

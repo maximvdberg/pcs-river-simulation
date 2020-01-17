@@ -140,19 +140,23 @@ void GLRenderer::setModelMatrix( const float matrix[16] ) {
     glUniformMatrix4fv(u_model_matrix, 1, true, matrix);
 }
 
+void GLRenderer::setModelMatrix( float posX, float posY, float width, float height ) {
+    const float modelMatrix[16] = {
+       (float) width, 0.f, 0.f, posX,
+       0.f, (float) height, 0.f, posY,
+       0.f, 0.f, 1.f, 0.f,
+       0.f, 0.f, 0.f, 1.f,
+    };
+    setModelMatrix(modelMatrix);
+}
+
 
 void GLRenderer::renderTexture( GLuint texture,
                                 float posX, float posY,
                                 float width, float height ) {
 
     // Move and scale the model.
-    const float modelMatrix[16] = {
-       width, 0.f, 0.f, posX,
-       0.f, height, 0.f, posY,
-       0.f, 0.f, 1.f, 0.f,
-       0.f, 0.f, 0.f, 1.f,
-    };
-    setModelMatrix(modelMatrix);
+    setModelMatrix(posX, posY, width, height);
 
     // Bind the texture to binding point 0.
     glActiveTexture(GL_TEXTURE0 + 0);
@@ -289,7 +293,8 @@ GLuint gl::genTexture( int width, int height, const uint8_t* data ) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
     // Send the image to OpenGL.
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    //GL_RGBA32F
 
     // Unbind the texture.
     glBindTexture(GL_TEXTURE_2D, 0);
