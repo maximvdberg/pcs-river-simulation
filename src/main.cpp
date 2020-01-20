@@ -36,13 +36,6 @@ int main() {
     // Store the input data here, and initialise it.
     InputData input;
 
-    // Create two textures.
-    const int width = 500, height = 500;
-    GLuint texture1 = gl::genTexture(width, height);
-    renderer.renderToTexture(texture1);
-    renderer.clear(1.f, 0.f, 0.f);
-    renderer.renderToScreen();
-
     LatticeBoltzmann boltzmann = LatticeBoltzmann(renderer);
 
 
@@ -61,28 +54,6 @@ int main() {
 
         // Clear the screen so we can draw the new frame.
         renderer.clear(0.f, 0.f, 0.5f, 1.f);
-
-        // Draw some stuff.
-        renderer.renderToTexture(texture1);
-        renderer.updateViewport(width, height);
-        renderer.clear(0.5f, 0.f, 0.f, 1.0f);
-        renderer.setRenderColor(0.4f, .8f, 3.f, 1.f);
-        renderer.renderTexture(renderer.getBlankTexture(),
-                               100, 100, 200, 200);
-        renderer.renderToScreen();
-        renderer.updateViewport(window.width, window.height);
-        renderer.renderTexture(renderer.getBlankTexture(),
-                        100, 100, 200, 200);
-
-        // Draw some stuff.
-        static int posX, posY;
-        if (input.keyMap[SDL_SCANCODE_A] == 0) {
-            posX = 140 + 100*std::cos(0.01f*SDL_GetTicks());
-            posY = 100 + 60*std::sin(0.001f*SDL_GetTicks());
-        }
-        renderer.setRenderColor(1.f, 1.f, 1.f, 1.f);
-        renderer.renderTexture(texture1,
-                               posX,  posY, 500, 500);
 
 
         boltzmann.update(renderer, input, window.width, window.height);
