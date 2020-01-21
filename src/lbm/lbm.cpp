@@ -94,6 +94,40 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
         paused = !paused;
     }
 
+
+    // Add the objects.
+    if (input.keyMap[SDL_SCANCODE_O] == 2) {
+        renderer.renderToTexture(buffers[0].texture[0]);
+        renderer.updateViewport(width, height);
+        renderer.setRenderColor(1.f, 0.f, 0.f, 0.f);
+        renderer.renderRectangle(10.f, 0.f, width, height);
+        for (int i = 1; i < 3; i++) {
+            renderer.renderToTexture(buffers[0].texture[i]);
+            renderer.setRenderColor(0.f, 0.f, 0.f, 0.f);
+            renderer.renderRectangle(10.f, 0.f, width, height);
+            // renderer.renderRectangle(100.f, 280.f, 300.f, 100.f);
+        }
+
+        renderer.renderToTexture(buffers[0].texture[0]);
+        renderer.setRenderColor(0.f, 0.f, 0.f, 0.43777778f);
+        renderer.renderRectangle(10.f, 200.f, width-800.f, 100.f);
+
+        // renderer.setRenderColor(1.f, 0.f, 0.f, 0.0);
+        // // renderer.setRenderColor(1.f, 0.f, 0.f, 0.43777778f);
+        // renderer.renderRectangle(100.f, 280.f, 300.f, 100.f);
+        // renderer.renderToTexture(buffers[0].texture[1]);
+        // renderer.setRenderColor(0.f, 0.f, 0.f, 0.0);
+        // //renderer.setRenderColor(0.10944444444444444, 0.14777777777777779,
+        //             //   0.0811111111111111, 0.10944444444444444);
+        // renderer.renderRectangle(100.f, 280.f, 300.f, 100.f);
+
+        // renderer.renderToTexture(buffers[0].texture[2]);
+        // // renderer.setRenderColor(0.036944444444444446, 0.020277777777777777,
+        //             // 0.020277777777777777, 0.036944444444444446);
+        // renderer.renderRectangle(100.f, 280.f, 300.f, 100.f);
+    }
+
+
     if (!paused|| input.keyMap[SDL_SCANCODE_F] == 2) {
 
         renderer.useProgram(programs[0]);
@@ -145,27 +179,7 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
         renderer.resetProgram();
     }
 
-    // Add the objects.
-    if (input.keyMap[SDL_SCANCODE_O] == 2) {
-        renderer.renderToTexture(buffers[0].texture[0]);
-        renderer.updateViewport(width, height);
-        // renderer.setRenderColor(1.f, 0.f, 0.f, 0.43777778f);
-        renderer.setRenderColor(1.f, 0.f, 0.f, 0.f);
-        renderer.renderRectangle(10.f, 0.f, width, height);
-        // renderer.renderRectangle(100.f, 280.f, 300.f, 100.f);
 
-        for (int i = 1; i < 3; i++) {
-            renderer.renderToTexture(buffers[0].texture[i]);
-            renderer.setRenderColor(0.f, 0.f, 0.f, 0.f);
-            renderer.renderRectangle(10.f, 0.f, width, height);
-            // renderer.renderRectangle(100.f, 280.f, 300.f, 100.f);
-        }
-
-        renderer.renderToTexture(buffers[0].texture[0]);
-        renderer.setRenderColor(0.f, 0.f, 0.f, 0.43777778f);
-        renderer.renderRectangle(10.f, 200.f, width-500.f, 100.f);
-
-    }
 
     renderer.renderToScreen();
 

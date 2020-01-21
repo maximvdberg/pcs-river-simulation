@@ -308,6 +308,110 @@ GLuint gl::genTexture( int width, int height, const float* data ) {
 }
 
 
+// std::tuple<GLuint, int, int> gl::loadTexture( const std::string& filename ) {
+
+//     // (source: http://lazyfoo.net/tutorials/SDL/41_bitmap_fonts/index.php).
+
+//     // Load the file, if its file structure is supported.
+//     SDL_Surface* loadedSurface = nullptr;
+//     if (string::endsWith(path, ".png") || string::endsWith(path, ".bmp")) {
+//         loadedSurface = IMG_Load(actualPath.c_str());
+//     }
+//     else {
+//         logging::error(INFO_, "Image file structure of [",
+//                     path.c_str(), "] not supported!");
+//         return;
+//     }
+
+//     // Check if the file is loaded succesfully.
+//     if (loadedSurface == nullptr) {
+//         logging::warning(INFO_, "Failed to load texture file [",
+//                         path.c_str(),
+//                         "], it probably doesn't exist! SDL Error: ",
+//                         SDL_GetError());
+//         return;
+//     }
+
+//     // Convert the SDL surfce and pass it to the renderer
+//     // to create a texture.
+//     Texture texture = surfaceToTexture(loadedSurface);
+//     SDL_FreeSurface(loadedSurface);
+//     if (texture.data != 0) {
+//         loaded = true;
+//     }
+
+
+//     Texture surfaceToTexture( SDL_Surface* surface ) {
+//         //https://www.gamedev.net/forums/topic/184477-
+//         //sdl_surface-to-opengl-texture/?do=findComment&comment=2135535
+
+
+//         int width = surface->w;
+//         int height = surface->h;
+//         int bpp = surface->format->BytesPerPixel;
+
+//         HeapArray<Color, 2> pixels(height, width);
+//         uint8_t* dstPixel = (uint8_t*) pixels.c_arr();
+
+//         SDL_LockSurface(surface);
+
+//         // Temporary fix for black boxes around indexed sprites,
+//         // until I fix true color palettes.
+//         if (SDL_Palette* palette = surface->format->palette) {
+//             if (palette->ncolors > 0) {
+//                 palette->colors[0].a = 0;
+//             }
+//         }
+
+//     int y, x;
+//     uint8_t* srcPixel;
+//     uint32_t truePixel;
+
+//     for (y = height - 1; y >= 0; y--) {
+//         for (x = 0; x < width; x++) {
+//             srcPixel = (uint8_t*) surface->pixels + y * surface->pitch + x * bpp;
+
+//             switch (bpp) {
+//             case 1:
+//                 truePixel = *srcPixel;
+//                 break;
+
+//             case 2:
+//                 truePixel = *(uint16_t*) srcPixel;
+//                 break;
+
+//             case 3:
+//                 if (SDL_BYTEORDER == SDL_BIG_ENDIAN) {
+//                     truePixel = srcPixel[0] << 16 | srcPixel[1] << 8 | srcPixel[2];
+//                 } else {
+//                     truePixel = srcPixel[0] | srcPixel[1] << 8 | srcPixel[2] << 16;
+//                 }
+//                 break;
+
+//             case 4:
+//                 truePixel = *(uint32_t*) srcPixel;
+//                 break;
+
+//             default:
+//                 logging::warning(INFO_, "Image bpp of ", bpp, "unusable!");
+//                 return {0, width, height};
+//             }
+
+//             //TODO: remove this, it's slow.
+//             SDL_GetRGBA(truePixel, surface->format, &(dstPixel[0]),
+//                         &(dstPixel[1]), &(dstPixel[2]), &(dstPixel[3]));
+//             dstPixel++;
+//             dstPixel++;
+//             dstPixel++;
+//             dstPixel++;
+//         }
+//     }
+
+//     SDL_UnlockSurface(surface);
+//     return renderer::createTexture(pixels);
+// }
+
+
 bool gl::checkErrors( const std::string& identifier ) {
 
     bool errorOccured = false;

@@ -112,6 +112,7 @@ void main() {
         float feq = w[i] * rho + rho * s;
 
         f[i] -= omega * (f[i] - feq);
+
         // Ad hoc fix for "explosions"
         if (f[i] < 0.0) {
             f[i] = 0.0;
@@ -124,8 +125,8 @@ void main() {
     texture0.g = rho;
 
     if (isWall) {
-        if (rho > 0.85) {
-        /* if (cor(rho) > rand(u)) { */
+        if (rho > 0.8) {
+        // if (cor(rho) > rand(u*texture_loc)) {
             // Corrosion
             texture0.r = 0.0;
 
@@ -142,7 +143,7 @@ void main() {
             //f[0] = 0;
             //for (int i = 0; i < 9; i++)
             //    f[0] = max(f[0],texture(u_textures[0], v_tex_coords - pixel_size * e[i]).a);
-        } else  {
+        } else {
             // Bounce back
             float f2c = f[2]; // N
             float f3c = f[3]; // W
