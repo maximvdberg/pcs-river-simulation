@@ -126,8 +126,11 @@ void main() {
     texture0.g = rho;
 
     if (isWall) {
-        if (rho > 0.8) {
-        // if (cor(rho) > rand(u*texture_loc)) {
+        press_x = f[1] - f[3] + f[5] - f[6] - f[7] + f[8] // E + NE + SE - W - NW - SW 
+        press_y = f[2] - f[4] + f[5] + f[6] - f[7] - f[8] // N + NE + NW - S - SE - SW
+        press = sqrt(press_x**2 + press_y**2)
+        if (press > 0.8) {
+        // if (cor(press) > rand(u*texture_loc)) {
             // Corrosion
             texture0.r = 0.0;
 
