@@ -44,6 +44,7 @@ float sed( float x ) {
     return (sigma(sed_slope * (x - sed_act)) - sigma_b) * sed_scaling;
 }
 
+
 // Flow directions.
 // const ivec2 e[9] = {ivec2(0, 0),  ivec2(1, 0),   ivec2(0, 1),
 //                     ivec2(-1, 0), ivec2(0, -1),  ivec2(1, 1),
