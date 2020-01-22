@@ -158,7 +158,7 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
         renderer.updateViewport(width, height);
         renderer.setModelMatrix(0.f, 0.f, width, height);
 
-        for (unsigned i = 0; i < 10; ++i) {
+        for (unsigned i = 0; i < 1; ++i) {
 
             readPixels(renderer, input);
 
