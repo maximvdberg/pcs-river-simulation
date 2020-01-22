@@ -18,6 +18,9 @@ using namespace pcs;
 #include <sstream>
 #include <fstream>
 
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
+
 
 std::string loadFile( const std::string& path ) {
     std::ifstream file(path);
@@ -293,7 +296,8 @@ GLuint gl::genTexture( int width, int height, const float* data ) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
     // Send the image to OpenGL.
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, data);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0,
+                 GL_RGBA, GL_FLOAT, data);
     //GL_RGBA32F
 
     // Unbind the texture.
@@ -308,12 +312,72 @@ GLuint gl::genTexture( int width, int height, const float* data ) {
 }
 
 
-// std::pair<GLuint, std::pair<int, int>> gl::loadTexture( const std::string& filename ) {
+GLuint gl::loadTexture( const std::string& filePath,
+                        int* widthPtr, int* heightPtr ) {
 
-//     GLuint texture = genTexture( int width, int height, const float* data )
+    SDL_Surface* surface = IMG_Load(filePath.c_str());
 
-//     return {texture, {width, height}};
-// }
+    int width = surface->w;
+    int height = surface->h;
+    int bpp = surface->format->BytesPerPixel;
+
+    float* pixels = new float[height*width*4];
+    float* dstPixel = pixels;
+
+    SDL_LockSurface(surface);
+
+    int y, x;
+    uint8_t* srcPixel;
+    uint32_t truePixel;
+
+    for (y = height - 1; y >= 0; y--) {
+        for (x = 0; x < width; x++) {
+            srcPixel = (uint8_t*) surface->pixels + y * surface->pitch + x * bpp;
+
+            switch (bpp) {
+            case 1:
+                truePixel = *srcPixel;
+                break;
+            case 2:
+                truePixel = *(uint16_t*) srcPixel;
+                break;
+            case 3:
+                if (SDL_BYTEORDER == SDL_BIG_ENDIAN) {
+                    truePixel = srcPixel[0] << 16 | srcPixel[1] << 8 | srcPixel[2];
+                } else {
+                    truePixel = srcPixel[0] | srcPixel[1] << 8 | srcPixel[2] << 16;
+                }
+                break;
+            case 4:
+                truePixel = *(uint32_t*) srcPixel;
+                break;
+            default:
+                break;
+            }
+
+            //TODO: remove this, it's slow.
+            uint8_t pxls[4];
+            SDL_GetRGBA(truePixel, surface->format, &pxls[0], &pxls[1], &pxls[2], &pxls[3]);
+
+            for (uint8_t p : pxls) {
+                *dstPixel = (float) p / 255.f;
+                dstPixel++;
+            }
+        }
+    }
+
+    SDL_UnlockSurface(surface);
+    GLuint texture = gl::genTexture(width, height, pixels);
+    delete[] pixels;
+
+    // 'Return' the width and height of the texture.
+    if (widthPtr != nullptr)
+        *widthPtr = width;
+    if (heightPtr != nullptr)
+        *heightPtr = height;
+
+    return texture;
+}
 
 
 bool gl::checkErrors( const std::string& identifier ) {

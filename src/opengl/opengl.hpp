@@ -268,6 +268,13 @@ namespace pcs {
         GLuint genTexture( int width, int height, const float* data = nullptr );
 
         /**
+         * TODO
+         */
+        GLuint loadTexture( const std::string& filePath,
+                            int* width, int* height );
+
+
+        /**
          * Check and print any OpenGL errors that may have occured. An
          * identifier can be supplied to mark the printed output. This
          * function returns true if errors occured, false otherwise.
