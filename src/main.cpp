@@ -55,7 +55,6 @@ int main() {
         // Clear the screen so we can draw the new frame.
         renderer.clear(0.f, 0.f, 0.5f, 1.f);
 
-
         boltzmann.update(renderer, input, window.width, window.height);
 
         // Swap the buffer we have rendered to with the display buffer.

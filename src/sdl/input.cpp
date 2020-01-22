@@ -14,7 +14,7 @@
 void pcs::updateInput( InputData& data ) {
 
     // Update the keypresses.
-    for (const std::pair<SDL_Scancode, char>& v : data.keyMap) {
+    for (const std::pair<int, char>& v : data.keyMap) {
         data.keyMap[v.first] = v.second == 0 ? 0 : 1;
     }
 
@@ -40,6 +40,17 @@ void pcs::updateInput( InputData& data ) {
         case SDL_KEYUP:
             data.keyMap[e.key.keysym.scancode] = 0;
             break;
+
+        case SDL_MOUSEMOTION:
+            data.cursorX = e.button.x;
+            data.cursorY = e.button.y;
+            break;
+
+        case SDL_MOUSEBUTTONDOWN:
+            data.keyMap[e.button.button] = 2;
+
+        case SDL_MOUSEBUTTONUP:
+            data.keyMap[e.button.button] = 0;
 
         default:
             break;

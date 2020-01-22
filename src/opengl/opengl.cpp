@@ -296,9 +296,8 @@ GLuint gl::genTexture( int width, int height, const float* data ) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
     // Send the image to OpenGL.
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0,
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
                  GL_RGBA, GL_FLOAT, data);
-    //GL_RGBA32F
 
     // Unbind the texture.
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -306,6 +305,35 @@ GLuint gl::genTexture( int width, int height, const float* data ) {
     if (glGetError() == GL_OUT_OF_MEMORY)  {
         print(INFO_, "Out of texture memory!");
         glDeleteTextures(1, &textureId);
+        return 0;
+    }
+    return textureId;
+}
+
+GLuint gl::genUTexture( int width, int height, const uint8_t* data ) {
+
+    // Generate the texture and bind it.
+    GLuint textureId;
+    glGenTextures(1, &textureId);
+    glBindTexture(GL_TEXTURE_2D, textureId);
+
+    // Set some texture parameters.
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+    // Send the image to OpenGL.
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32UI, width, height, 0,
+                 GL_RGBA_INTEGER, GL_UNSIGNED_INT, nullptr);
+    //GL_RGBA32F
+
+    // Unbind the texture.
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    if (glGetError() == GL_OUT_OF_MEMORY)  {
+        glDeleteTextures(1, &textureId);
+        print(INFO_, "Out of texture memory!");
         return 0;
     }
     return textureId;

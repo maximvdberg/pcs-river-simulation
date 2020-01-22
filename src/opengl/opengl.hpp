@@ -266,6 +266,7 @@ namespace pcs {
          * @return The texture id, or 0 if the generation has failed.
          */
         GLuint genTexture( int width, int height, const float* data = nullptr );
+        GLuint genUTexture( int width, int height, const uint8_t* data = nullptr );
 
         /**
          * TODO

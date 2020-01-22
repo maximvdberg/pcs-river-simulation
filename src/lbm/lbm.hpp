@@ -7,10 +7,13 @@ namespace pcs {
 
 
     struct LatticeBoltzmann {
+
+        static constexpr size_t textureCount = 7;
+
         /**
          */
         struct Buffers {
-            GLuint texture[4];
+            GLuint texture[textureCount];
             GLuint fbo;
         };
 
@@ -30,17 +33,22 @@ namespace pcs {
         void update( GLRenderer& renderer, InputData& input,
                      int width, int height );
 
+        void readPixels( GLRenderer& renderer, InputData& input );
+
         int width, height;
 
         GLuint programs[2]; // {<stream>, <collide>, <boundary>, <visual>}
         GLuint boundaryProgram;
 
-        GLuint u_textures[4]; // Uniform texture locations
+        GLuint u_textures[textureCount]; // Uniform texture locations
 
         Buffers buffers[2];
 
         GLuint backgroundTexture;
 
         unsigned frame;
+        bool paused;
+
+        int cursorX, cursorY;
     };
 }

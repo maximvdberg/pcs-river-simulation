@@ -28,7 +28,9 @@ namespace pcs {
         // And keyboard input map, where the value corresponding to a key key
         // is 2 if the button was pressed this frame, 1 if the button is held
         // down, and 0 otherwise.
-        std::map<SDL_Scancode, char> keyMap;
+        std::map<int, char> keyMap;
+
+        int cursorX, cursorY;
     };
 
     /**
