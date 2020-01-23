@@ -25,7 +25,9 @@ namespace pcs {
     struct Window {
         SDL_Window* sdlData;
         void* glContext;
+
         int width, height;
+        bool sizeChanged;
     };
 
     /**

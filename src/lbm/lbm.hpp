@@ -47,8 +47,9 @@ namespace pcs {
         GLuint backgroundTexture;
 
         unsigned frame;
-        bool paused;
 
+        bool paused;
+        float screenX, screenY, screenScale;
         int cursorX, cursorY;
     };
 }

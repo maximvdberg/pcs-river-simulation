@@ -43,12 +43,11 @@ int main() {
     while (!input.quit) {
 
         // Update the input (like key presses, window events) we got this frame.
-        updateInput(input);
+        updateInput(window, input);
 
         // Update the viewport if the window size has changed.
         if (input.windowSizeChanged) {
             input.windowSizeChanged = false;
-            SDL_GL_GetDrawableSize(window.sdlData, &window.width, &window.height);
             renderer.updateViewport(window.width, window.height);
         }
 

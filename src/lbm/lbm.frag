@@ -10,9 +10,9 @@ layout(location = 3) uniform usampler2D u_textures[7];
 
 /*
  * How the textures are mapped:
- * ---------------------------------------------
+ * -----------+---------------+----------------
  * | Texture  | Mapped to     | input/output
- * ---------+-----------------+-----------------
+ * -----------+---------------+-----------------
  *   0.r        Walls           In/out
  *   0.g        Flow            In
  *   0.b        Walls temp      In
