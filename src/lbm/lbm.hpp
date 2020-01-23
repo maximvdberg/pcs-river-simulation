@@ -30,10 +30,13 @@ namespace pcs {
                          int width, int height );
 
 
+        void handleInput( GLRenderer& renderer, InputData& input );
+
         void update( GLRenderer& renderer, InputData& input,
                      int width, int height );
 
         void readPixels( GLRenderer& renderer, InputData& input );
+
 
         int width, height;
 
@@ -41,6 +44,7 @@ namespace pcs {
         GLuint boundaryProgram;
 
         GLuint u_textures[textureCount]; // Uniform texture locations
+        GLuint u_settings; // bvec4: enable flow, enable corrosion, enable sedimentation
 
         Buffers buffers[2];
 
@@ -49,6 +53,8 @@ namespace pcs {
         unsigned frame;
 
         bool paused;
+        bool settings[4];
+
         float screenX, screenY, screenScale;
         int cursorX, cursorY;
     };

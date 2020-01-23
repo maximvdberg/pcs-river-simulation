@@ -17,12 +17,12 @@ void main() {
     uvec4 color_1 = texture(u_textures[1], v_tex_coords);
     uvec4 color_2 = texture(u_textures[2], v_tex_coords);
 
-    bool isWall = color_0.b != 0;
+    bool isWall = color_0.a != 0;
 
     float rho = float(packDouble2x32(color_2.rg));
 
     if (isWall) {
-        o_color = vec4(1.0, 1.0, 1.0, 1.0) * float(color_0.b);
+        o_color = vec4(1.0, 1.0, 1.0, 1.0) * rho;
     }
     else {
         vec2 u = vec2(float(packDouble2x32(color_1.rg)),
