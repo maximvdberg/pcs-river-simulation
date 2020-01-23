@@ -64,9 +64,9 @@ const float cor_lim   = 0.05;      // Maximum probability
 const float cor_slope = 30.0;      // Slope of the curve
 
 // Constants for sedimentation activation curve
-const float sed_act   = 0.03;      // Centre of the curve
+const float sed_act   = 0.05;      // Centre of the curve
 const float sed_lim   = 0.05;      // Maximum probability
-const float sed_slope = 150.0;     // Slope of the curve
+const float sed_slope = 160.0;     // Slope of the curve
 
 
 float sigma(float x) {
@@ -84,7 +84,7 @@ float cor( float x ) {
 float sigma_b = sigma(-sed_slope * sed_act);
 float sed_scaling = sed_lim / (1 - sigma_b);
 float sed( float x ) {
-    return (sigma(sed_slope * (x - sed_act)) - sigma_b) * sed_scaling;
+    return sed_lim - (sigma(sed_slope * (x - sed_act)) - sigma_b) * sed_scaling;
 }
 
 
@@ -198,7 +198,7 @@ void main() {
         rho = press;
 
         /* if (press > 0.28) { */
-        if (cor(float(press)) > rand(vec2(press*texture_loc)) + 0.01) {
+        if (cor(float(press)) > rand(vec2(press*texture_loc)) + 0.02) {
             // Corrosion
             data.b = 0;
 
@@ -236,7 +236,7 @@ void main() {
     }
     else {
         // Sedimentation
-        if (sed(float(length(u))) < rand(vec2(u)) + 0.01) {
+        if (sed(float(length(u))) > rand(vec2(u)) + 0.03) {
             data.r = 1;
         }
 
