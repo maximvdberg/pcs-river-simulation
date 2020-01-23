@@ -23,6 +23,7 @@ void main() {
 
     if (isWall) {
         o_color = vec4(1.0, 1.0, 1.0, 1.0) * float(color_0.b);
+        o_color = vec4(1.0, 1.0, 1.0, 1.0) * float(rho);
     }
     else {
         vec2 u = vec2(float(packDouble2x32(color_1.rg)),
