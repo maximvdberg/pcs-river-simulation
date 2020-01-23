@@ -11,7 +11,7 @@
 #include "input.hpp"
 
 
-void pcs::updateInput( InputData& data ) {
+void pcs::updateInput( Window& window, InputData& data ) {
 
     // Update the keypresses.
     for (const std::pair<int, char>& v : data.keyMap) {
@@ -30,6 +30,9 @@ void pcs::updateInput( InputData& data ) {
         case SDL_WINDOWEVENT:
             if (e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
                 data.windowSizeChanged = true;
+                SDL_GL_GetDrawableSize(window.sdlData,
+                                       &window.width,
+                                       &window.height);
             }
             break;
 
@@ -43,14 +46,16 @@ void pcs::updateInput( InputData& data ) {
 
         case SDL_MOUSEMOTION:
             data.cursorX = e.button.x;
-            data.cursorY = e.button.y;
+            data.cursorY = window.height - e.button.y;
             break;
 
         case SDL_MOUSEBUTTONDOWN:
             data.keyMap[e.button.button] = 2;
+            break;
 
         case SDL_MOUSEBUTTONUP:
             data.keyMap[e.button.button] = 0;
+            break;
 
         default:
             break;

@@ -13,6 +13,8 @@
 #include <map>
 #include <SDL2/SDL.h>
 
+#include "window.hpp"
+
 
 namespace pcs {
 
@@ -34,9 +36,11 @@ namespace pcs {
     };
 
     /**
-     * Update the input data by polling al the pending SDL events.
+     * Update the input data and window by polling all the
+     * pending SDL events.
      * @see pcs::InputData
+     * @param window The window which to update.
      * @param intputData The input data to update.
      */
-    void updateInput( InputData& inputData );
+    void updateInput( Window& window, InputData& inputData );
 }

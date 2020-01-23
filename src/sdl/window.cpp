@@ -22,6 +22,7 @@ Window pcs::createOpenGLWindow( const std::string& title, int width, int height 
     Window window;
     window.width = width;
     window.height = height;
+    window.sizeChanged = true;
 
     // Init SDL and it's window.
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
