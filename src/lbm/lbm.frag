@@ -34,14 +34,13 @@ layout(location = 3) uniform usampler2D u_textures[7];
 
 
 // Some constants.
-
-const double viscosity = 0.001;             // Viscosity
-const double delta_x = 1.0;                 // Lattice spacing
+const double viscosity = 0.001;              // Viscosity
+const double delta_x = 1.0;                  // Lattice spacing
 const double delta_t = 1.0;                  // Time step
 double c = delta_x / delta_t;                // Lattice speed
 double omega = 2 / (6 * viscosity * delta_t
                    / (delta_x * delta_x) + 1);   // Parameter for "relaxation"
-const double u0 = 0.1;                       // Initial and in-flow speed
+const double u0 = 0.3;                       // Initial and in-flow speed
 
 
 const dvec2 e[9] = {dvec2(0., 0.),  dvec2(1., 0.),   dvec2(0., 1.),
@@ -59,34 +58,34 @@ const double w[9] = {4. /  9., 1. /  9., 1. /  9.,
 
 
 
-// // Constants for corrosion activation curve
-// const float cor_act = 10.0;      // Centre of the curve
-// const float cor_lim = 0.04;      // Maximum probability
-// const float cor_slope = 0.5;     // Slope of the curve
+// Constants for corrosion activation curve
+const float cor_act   = 0.30;      // Centre of the curve
+const float cor_lim   = 0.05;      // Maximum probability
+const float cor_slope = 30.0;      // Slope of the curve
 
-// // Constants for sedimentation activation curve
-// const float sed_act = 0.2;      // Centre of the curve
-// const float sed_lim = 0.7;      // Maximum probability
-// const float sed_slope = 20;     // Slope of the curve
+// Constants for sedimentation activation curve
+const float sed_act   = 0.05;      // Centre of the curve
+const float sed_lim   = 0.05;      // Maximum probability
+const float sed_slope = 160.0;     // Slope of the curve
 
 
-// float sigma(float x) {
-//     return 1 / (1 + exp(-x));
-// }
+float sigma(float x) {
+    return 1 / (1 + exp(-x));
+}
 
-// // Corrosion activation curve
-// float sigma_a = sigma(-cor_slope * cor_act);
-// float cor_scaling = cor_lim / (1 - sigma_a);
-// float cor( float x ) {
-//     return (sigma(cor_slope * (x - cor_act)) - sigma_a) * cor_scaling;
-// }
+// Corrosion activation curve
+float sigma_a = sigma(-cor_slope * cor_act);
+float cor_scaling = cor_lim / (1 - sigma_a);
+float cor( float x ) {
+    return (sigma(cor_slope * (x - cor_act)) - sigma_a) * cor_scaling;
+}
 
-// // Sedimentation activation curve
-// float sigma_b = sigma(-sed_slope * sed_act);
-// float sed_scaling = sed_lim / (1 - sigma_b);
-// float sed( float x ) {
-//     return (sigma(sed_slope * (x - sed_act)) - sigma_b) * sed_scaling;
-// }
+// Sedimentation activation curve
+float sigma_b = sigma(-sed_slope * sed_act);
+float sed_scaling = sed_lim / (1 - sigma_b);
+float sed( float x ) {
+    return sed_lim - (sigma(sed_slope * (x - sed_act)) - sigma_b) * sed_scaling;
+}
 
 
 
@@ -95,9 +94,9 @@ ivec2 pmod( in ivec2 i, in ivec2 n ) {
     return ivec2(mod(mod(i, n) + n, n));
 }
 
-// float rand(vec2 co) {
-//     return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
-// }
+float rand(vec2 co) {
+    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
 
 double get1f( in usampler2D textr, in vec2 pos ) {
     return packDouble2x32(texture(textr, pos).rg);
@@ -198,9 +197,8 @@ void main() {
         double press = sqrt(press_x*press_x + press_y*press_y);
         rho = press;
 
-        if (press > 0.28) {
-        // if (cor(press) > rand(press*texture_loc) + 0.0001) {
-        // if (f[5] > 0.01 && false) {
+        /* if (press > 0.28) { */
+        if (cor(float(press)) > rand(vec2(press*texture_loc)) + 0.02) {
             // Corrosion
             data.b = 0;
 
@@ -218,8 +216,6 @@ void main() {
             //f[0] = 0;
             //for (int i = 0; i < 9; i++)
             //    f[0] = max(f[0],texture(u_textures[0], v_tex_coords - pixel_size * e[i]).a);
-        } else {
-
         }
 
         // Bounce back
@@ -238,15 +234,13 @@ void main() {
         f[8] = -abs(f6c);  // SE -> NW
         f[5] = -abs(f7c);  // NE -> SW
     }
-    // else {
-    //     // Sedimentation
-    //     if (length(u) < 0.001) {
-    //         if (rand(u) < 0.1) {
-    //             texture0.r = 1.0;
-    //         }
-    //     }
+    else {
+        // Sedimentation
+        if (sed(float(length(u))) > rand(vec2(u)) + 0.03) {
+            data.r = 1;
+        }
 
-    // }
+    }
 
     // Flow from the right.
     if (!isWall && data.g != 0) {

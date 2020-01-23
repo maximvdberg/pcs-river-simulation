@@ -162,6 +162,11 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
         renderer.setModelMatrix(0.f, 0.f, width, height);
 
         for (unsigned i = 0; i < 1; ++i) {
+<<<<<<< HEAD
+=======
+
+            readPixels(renderer, input);
+>>>>>>> 919b0f1777d3aaa35589f00e1977ec563fcef1f6
 
             // Bind the textures from which we render, and bind to
             // framebuffer to which we rander.
