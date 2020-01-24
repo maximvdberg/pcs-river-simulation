@@ -38,8 +38,8 @@ layout(location = 10) uniform bvec4 u_settings;
 
 
 // Some constants.
-const double viscosity = 0.001;              // Viscosity
-const double delta_x = 1.0;                  // Lattice spacing
+const double viscosity = 0.0001;              // Viscosity
+const double delta_x = 0.5;                  // Lattice spacing
 const double delta_t = 1.0;                  // Time step
 double c = delta_x / delta_t;                // Lattice speed
 double omega = 2 / (6 * viscosity * delta_t
@@ -110,12 +110,9 @@ double get2f( in usampler2D textr, in vec2 pos ) {
     return packDouble2x32(texture(textr, pos).ba);
 }
 
-double calc_feq( in uint i , in double rho, in dvec2 u) {
-    double udotu = 1.5 * dot(u, u) / (c * c);
+double calc_feq( in uint i , in double rho, in dvec2 u, in double udotu) {
     double edotu_c = 3.0*dot(e[i], u) / c;
-    double s = w[i] * (edotu_c + edotu_c*edotu_c / 2.0 - udotu);
-
-    return (w[i] + s) * rho;
+    return clamp(w[i] * rho * (1 + edotu_c + edotu_c*edotu_c / 2.0 - 1.5 * udotu / (c * c)), 0, 10);
 }
 
 
@@ -182,8 +179,9 @@ void main() {
 
     if (!isWall && !isSource) {
         // Interpolate f with feq
+        double udotu = dot(u,u);
         for (uint i = 0; i < 9; i++) {
-            f[i] = max(0,(1 - omega) * f[i] + omega * calc_feq(i, rho, u));
+            f[i] = abs((1 - omega) * f[i] + omega * calc_feq(i, rho, u, udotu));
         }
 
         // Sedimentation.
@@ -242,8 +240,9 @@ void main() {
             u += u0;
         }
 
+        double udotu = dot(u,u);
         for (uint i = 0; i < 9; i++) {
-            f[i] = calc_feq(i, rho, u);
+            f[i] = calc_feq(i, rho, u, udotu);
         }
 
         f[3] = 0;
