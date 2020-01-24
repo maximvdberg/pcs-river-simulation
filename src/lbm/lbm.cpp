@@ -6,12 +6,18 @@ using namespace pcs;
 
 LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer ) {
 
-    backgroundTexture = gl::loadTexture("assets/result3.bmp", &width, &height);
+    backgroundTexture = gl::loadTexture("assets/river3.bmp", &width, &height);
 
     // width = 1000;
     // height = 500;
     frame = 0;
     paused = false;
+
+    settings[0] = true; // enable flow
+    settings[1] = false; // enable corrosion
+    settings[2] = false; // enable sedimentation
+    settings[3] = false; // switch wall visual
+
     screenX = screenY = 0.f;
     screenScale = 1.f;
     cursorX = cursorY = -1;
@@ -43,6 +49,7 @@ LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer ) {
     for (size_t i = 0; i < textureCount; ++i) {
         u_textures[i] = i + 3;
     }
+    u_settings = 10;// u_textures[textureCount - 1] + 1;
 
     // Program setup.
     for (GLuint program : programs) {
@@ -80,7 +87,8 @@ LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer ) {
     }
 
     renderer.renderToTexture(buffers[0].texture[0]);
-    renderWall(renderer, backgroundTexture, 0, 0, width, height);
+    renderer.setRenderColor(1.0f, 1.0f, 1.0f, 0.0f);
+    renderer.renderTexture(backgroundTexture, 0, 0, width, height);
 
     renderer.renderToScreen();
 
@@ -114,11 +122,7 @@ void LatticeBoltzmann::renderFlow( GLRenderer& renderer, GLuint texture, int pos
     renderer.renderTexture(texture, posX, posY, width, height);
 }
 
-
-
-void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
-                               int windowWidth, int windowHeight ) {
-
+void LatticeBoltzmann::handleInput( GLRenderer& renderer, InputData& input ) {
 
     float camSpeed = 10.f;
     if (input.keyMap[SDL_SCANCODE_LEFT]) screenX += camSpeed;
@@ -150,20 +154,40 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
 
     // Rerender the background.
     if (input.keyMap[SDL_SCANCODE_O] == 2) {
-        renderer.setRenderColor(1.0f, 0.0f, 0.0f, 0.43777778f);
-        renderWall(renderer, backgroundTexture, 0, 0, width, height);
+        //renderWall(renderer, backgroundTexture, 0, 0, width, height);
+        renderer.renderToTexture(buffers[0].texture[0]);
+        renderer.setRenderColor(1.0f, 1.0f, 1.0f, 0.0f);
+        renderer.renderTexture(backgroundTexture, 0, 0, width, height);
+
+    }
+
+    int settingsCodes[4] = {SDL_SCANCODE_Q, SDL_SCANCODE_W, SDL_SCANCODE_E, SDL_SCANCODE_R};
+    for (int i = 0; i < 4; ++i) {
+        if (input.keyMap[settingsCodes[i]] == 2)
+            settings[i] = !settings[i];
+    }
+    // Enable both corrosion and sedimentation.
+    if (input.keyMap[SDL_SCANCODE_T] == 2) {
+        settings[1] = settings[2] = true;
     }
 
 
-    if (!paused|| input.keyMap[SDL_SCANCODE_F] == 2) {
+}
+
+void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
+                               int windowWidth, int windowHeight ) {
+
+    handleInput(renderer, input);
+
+    if (!paused || input.keyMap[SDL_SCANCODE_F] == 2) {
 
         renderer.useProgram(programs[0]);
         renderer.updateViewport(width, height);
         renderer.setModelMatrix(0.f, 0.f, width, height);
 
-        for (unsigned i = 0; i < 1; ++i) {
+        glUniform4i(u_settings, settings[0], settings[1], settings[2], settings[3]);
 
-            readPixels(renderer, input);
+        for (unsigned i = 0; i < 1; ++i) {
 
             // Bind the textures from which we render, and bind to
             // framebuffer to which we rander.
@@ -176,17 +200,19 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
             ++frame;
         }
 
+        readPixels(renderer, input);
+
         // Render the results.
         renderer.resetProgram();
     }
 
     renderer.renderToScreen();
+    renderer.updateViewport(windowWidth, windowHeight);
 
     bool debugRender = true;
     if (debugRender) {
         float posX = 10.f, posY = 600.f;
         renderer.setRenderColor(1.f, 1.f, 1.f, 1.f);
-        renderer.updateViewport(windowWidth, windowHeight);
         renderer.renderTexture(buffers[frame % 2].texture[0],
                             posX, posY, width, height);
 
@@ -218,9 +244,35 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
         // renderer.renderModel(renderer.getSquareModel());
 
         renderer.resetProgram();
+
+        // renderer.setRenderColor(1.f, 1.f, 1.f, 1.f);
+        // renderer.renderTexture(backgroundTexture, 0, 0, width, height);
+
+        // renderer.se
     }
 
-    readPixels(renderer, input);
+    // Render the cursor.
+    if (cursorX >= 0 && cursorX < width &&
+        cursorY >= 0 && cursorY < height) {
+
+        if (input.keyMap[SDL_SCANCODE_H] == 0) {
+            const int size = 8;
+            renderer.setRenderColor(1.0, 0.0, 0.0);
+            renderer.renderRectangle(screenX + cursorX, screenY + cursorY-size/2, 1.f, size);
+            renderer.renderRectangle(screenX + cursorX-size/2, screenY + cursorY, size, 1.f);
+        }
+    }
+
+    // Render the settings
+    int size = 10;
+    renderer.setRenderColor(0.0, 0.0, 1.0);
+    for (int i = 0; i < 4; i++) {
+        renderer.setRenderColor(i % 2, i % 3, (i+1) % 2);
+
+        if (settings[i])
+            renderer.renderRectangle(10*i, 0, 10, 10);
+    }
+
 
     gl::checkErrors("CA end");
 }
@@ -230,6 +282,8 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
 void LatticeBoltzmann::readPixels( GLRenderer& renderer, InputData& input ) {
     // Some debug stuff, please ignore.
 
+    bool posChanged = false;
+
     if (input.keyMap[SDL_BUTTON_RIGHT] == 2) {
         cursorX = cursorY = -1;
     }
@@ -237,25 +291,32 @@ void LatticeBoltzmann::readPixels( GLRenderer& renderer, InputData& input ) {
     if (input.keyMap[SDL_BUTTON_LEFT] == 1) {
         cursorX = input.cursorX - screenX;
         cursorY = input.cursorY - screenY;
+        posChanged = true;
     }
 
 
     if (cursorX >= 0 && cursorX < width &&
-        cursorY >= 0 && cursorY < height) {
+        cursorY >= 0 && cursorY < height &&
+        (!paused || posChanged)) {
 
-        const Buffers& buf = buffers[frame % 2];
+        // glBindTextures(0, 7, buffers[frame % 2].texture);
+        // glBindFramebuffer(GL_FRAMEBUFFER, buffers[(frame + 1) % 2].fbo);
 
-        glBindTexture(GL_TEXTURE_2D, buf.texture[1]);
-        float pixel[4];
-        glReadPixels(cursorX, cursorY, 1, 1, GL_RGBA, GL_FLOAT, &pixel);
-        print(pixel[0], pixel[1], pixel[2], pixel[3]);
+        // const Buffers& buf = buffers[frame % 2];
+        // renderer.renderToTexture(buf.texture[0]);
+        // glReadBuffer(GL_COLOR_ATTACHMENT0);
 
-        if (input.keyMap[SDL_SCANCODE_H] == 0) {
-            const int size = 8;
-            renderer.setRenderColor(1.0, 0.0, 0.0);
-            renderer.renderRectangle(screenX + cursorX, screenY + cursorY-size/2, 1.f, size);
-            renderer.renderRectangle(screenX + cursorX-size/2, screenY + cursorY, size, 1.f);
-        }
+        // gl::checkErrors("CA end1");
+        // GLubyte pixels[4*4*4];
+        // glReadPixels(0, 0, 4, 4, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+
+        // float pixel[4];
+        // gl::checkErrors("CA end2");
+        // glReadPixels(cursorX, cursorY, 1, 1, GL_RGBA, GL_UNSIGNED_INT, &pixel);
+        // gl::checkErrors("CA end3");
+
+        // print("data", pixel[0], pixel[1], pixel[2], pixel[3], lwidth(10), lsepr(" "), lalignl());
+
     }
 
     // glBindTexture(GL_TEXTURE_2D, 0);

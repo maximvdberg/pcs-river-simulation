@@ -13,6 +13,7 @@
 #include <sstream>
 #include <iostream>
 #include <typeinfo>
+#include <iomanip>
 
 
 template <typename...>
@@ -96,9 +97,12 @@ void print( const Args&... to_print ) {
     for (const std::string& word : args) {
         if (word[0] == log_action_char) {
             switch(word[1]) {
-            case 's' : sepr = word.substr(2); break;
-            case 'e' : end = word.substr(2); break;
-            case 'f' : flush = true; break;
+            case 's': sepr = word.substr(2); break;
+            case 'e': end = word.substr(2); break;
+            case 'f': flush = true; break;
+            case 'w': std::cout << std::setw(std::stoi(word.substr(2))); break;
+            case 'l': std::cout << std::left; break;
+            case 'r': std::cout << std::right; break;
             default: break;
             }
         }
@@ -106,8 +110,8 @@ void print( const Args&... to_print ) {
     }
 
     // Print the words.
-    for (size_t j = 0; j < i; j++) {
-        if (j != 0) std::cout << sepr;
+    for (size_t j = 0; j < i; ++j) {
+        if (j != 0 && !sepr.empty()) std::cout << sepr;
         std::cout << words[j];
     }
 
@@ -156,4 +160,33 @@ inline std::string lend( std::string end ) {
  */
 inline std::string lflush() {
     return std::string({log_action_char, 'f'});
+}
+
+
+/**
+ * TODO
+ * @see print()
+ * @return An action string to be passed to a printing function.
+ */
+inline std::string lwidth( int width ) {
+    return std::string({log_action_char, 'w'}) + toString(width);
+}
+
+
+/**
+ * TODO
+ * @see print()
+ * @return An action string to be passed to a printing function.
+ */
+inline std::string lalignl() {
+    return std::string({log_action_char, 'l'});
+}
+
+/**
+ * TODO
+ * @see print()
+ * @return An action string to be passed to a printing function.
+ */
+inline std::string lalignr() {
+    return std::string({log_action_char, 'r'});
 }
