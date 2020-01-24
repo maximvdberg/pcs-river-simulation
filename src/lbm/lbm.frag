@@ -43,8 +43,9 @@ const double delta_x = 1.0;                  // Lattice spacing
 const double delta_t = 1.0;                  // Time step
 double c = delta_x / delta_t;                // Lattice speed
 double omega = 2 / (6 * viscosity * delta_t
-                   / (delta_x * delta_x) + 1);   // Parameter for "relaxation"
-const double u0 = 0.2;                       // Initial and in-flow speed
+                   / (delta_x * delta_x) + 1);  // Parameter for "relaxation"
+const dvec2 u_slope = dvec2(0.0001,0.0);                // Initial in-flow speed
+const dvec2 u0 = dvec2(0.0,0.0);                // Initial in-flow speed
 
 
 const dvec2 e[9] = {dvec2(0., 0.),  dvec2(1., 0.),   dvec2(0., 1.),
@@ -62,9 +63,9 @@ const double w[9] = {4. /  9., 1. /  9., 1. /  9.,
 
 
 // Constants for corrosion activation curve
-const float cor_act   = 0.30;      // Centre of the curve
-const float cor_lim   = 0.05;      // Maximum probability
-const float cor_slope = 30.0;      // Slope of the curve
+const float cor_act   = 1.0;      // Centre of the curve
+const float cor_lim   = 0.05;     // Maximum probability
+const float cor_slope = 6.0;      // Slope of the curve
 
 // Constants for sedimentation activation curve
 const float sed_act   = 0.05;      // Centre of the curve
@@ -109,6 +110,14 @@ double get2f( in usampler2D textr, in vec2 pos ) {
     return packDouble2x32(texture(textr, pos).ba);
 }
 
+double calc_feq( in uint i , in double rho, in dvec2 u) {
+    double udotu = 1.5 * dot(u, u) / (c * c);
+    double edotu_c = 3.0*dot(e[i], u) / c;
+    double s = w[i] * (edotu_c + edotu_c*edotu_c / 2.0 - udotu);
+
+    return (w[i] + s) * rho;
+}
+
 
 void main() {
 
@@ -150,47 +159,33 @@ void main() {
 
     double rho = 0.0;
     dvec2 u = vec2(0.0);
+    double feq[9];
+
+    for (uint i = 0; i < 9; i++) {
+        f[i] = abs(f[i]);
+        if (f[i] < 0) {
+        }
+    }
+
+    // Collide:
+    for (uint i = 0; i < 9; i++) {
+        rho += f[i];
+        u += e[i] * f[i];
+    }
+    /* u += u_slope; */
+    u *= c / rho;
+
 
     if (!isWall && !isSource) {
+        // Interpolate f with feq
         for (uint i = 0; i < 9; i++) {
-            f[i] = abs(f[i]);
-            if (f[i] < 0) {
-            }
-        }
-
-        // Collide:
-        for (uint i = 0; i < 9; i++) {
-            rho += f[i];
-        }
-
-        for (uint i = 1; i < 9; i++) {
-            u += e[i] * f[i];
-        }
-        u *= c / rho;
-
-
-        double udotu = 1.5 * dot(u, u) / (c * c);
-
-        for (uint i = 0; i < 9; i++) {
-            double edotu_c = 3.0*dot(e[i], u) / c;
-            double s = w[i] * (edotu_c + edotu_c*edotu_c / 2.0 - udotu);
-
-            double feq = w[i] * rho + rho * s;
-
-            f[i] -= omega * (f[i] - feq);
-            // if (f[i] < 0.0) {
-            //     f[i] = 0.0;
-            // }
-            // if (f[i] > 1.0) {
-            //     f[i] = 1.0;
-            // }
+            f[i] = (1 - omega) * f[i] + omega * calc_feq(i, rho, u);
         }
 
         // Sedimentation.
         if (u_settings[2] && sed(float(length(u))) > rand(vec2(u)) + 0.03) {
             data.g = 1; // Add wall next step.
         }
-
     }
     else if (isWall && !isSource) {
 
@@ -215,21 +210,6 @@ void main() {
             if (u_settings[1] && (cor(float(press)) > rand(vec2(press*texture_loc)) + 0.002)) {
                 // Corrosion, remove the wall
                 data.a = 0;
-
-
-                // Set water density
-                //f[1] = (f[1] + f[3]); // E + W
-                //f[3] = f[1];
-                //f[2] = (f[2] + f[4]); // N + S
-                //f[4] = f[2];
-                //f[5] = (f[5] + f[7]); // NE + SW
-                //f[7] = f[5];
-                //f[6] = (f[6] + f[8]); // NW + SE
-                //f[8] = f[6];
-
-                //f[0] = 0;
-                //for (int i = 0; i < 9; i++)
-                //    f[0] = max(f[0],texture(u_textures[0], v_tex_coords - pixel_size * e[i]).a);
             }
         }
 
@@ -251,21 +231,19 @@ void main() {
 
     }
     else { // is Source
-
-        // Flow from the right.
+        // Flow to the right.
         if (u_settings[0] && data.b != 0) {
+            u = dvec2(length(u),0) + u0;
 
-            const double u02 = u0*u0;
+            for (uint i = 0; i < 9; i++) {
+                f[i] = calc_feq(i, rho, u);
+            }
 
-            //f[0] = 0.0; // 0
-            f[1] = w[1]*(1 + 3*u0 + 4.5*u02 - 1.5*u02); // E
-            //f[2] = 0.0; // N
-            f[3] = w[3]*(1 - 3*u0 + 4.5*u02 - 1.5*u02); // W
-            f[4] = w[4]*(1 - 3*u0 + 4.5*u02 - 1.5*u02); // S
-            f[5] = w[5]*(1 + 3*u0 + 4.5*u02 - 1.5*u02); // NE
-            f[6] = w[6]*(1 - 3*u0 + 4.5*u02 - 1.5*u02); // NW
-            f[7] = w[7]*(1 - 3*u0 + 4.5*u02 - 1.5*u02); // SW
-            f[8] = w[8]*(1 + 3*u0 + 4.5*u02 - 1.5*u02); // SE
+            /* f[1] += fW; */
+            /* f[5] += fNW; */
+            /* f[8] += fSW; */
+
+            return;
         }
     }
 
