@@ -18,12 +18,12 @@ plt.show()
 
 
 
-sed_act   = 0.10
-sed_lim   = 0.05
-sed_slope = 20.0
+sed_act   = 0.05
+sed_lim   = 0.000
+sed_slope = 160.0
 a = sed_slope * sed_act
 sed = lambda x: sed_lim - (σ(sed_slope * x - a) - σ(-a)) / (1 - σ(-a)) * sed_lim
 
-t = np.linspace(0, 0.5,2000)
+t = np.linspace(0, .2,2000)
 plt.plot(t,sed(t))
 plt.show()

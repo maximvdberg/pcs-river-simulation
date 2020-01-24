@@ -13,7 +13,7 @@ LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer ) {
     frame = 0;
     paused = false;
 
-    settings[0] = true; // enable flow
+    settings[0] = false; // enable flow
     settings[1] = false; // enable corrosion
     settings[2] = false; // enable sedimentation
     settings[3] = false; // switch wall visual
@@ -97,7 +97,7 @@ LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer ) {
 
 void LatticeBoltzmann::close() {
     for (Buffers& buff : buffers) {
-        glDeleteTextures(3, buff.texture);
+        glDeleteTextures(textureCount, buff.texture);
         glDeleteFramebuffers(1, &buff.fbo);
     }
 
@@ -194,7 +194,7 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
 
         glUniform4i(u_settings, settings[0], settings[1], settings[2], settings[3]);
 
-        for (unsigned i = 0; i < 1; ++i) {
+        for (unsigned i = 0; i < 10; ++i) {
 
             // Bind the textures from which we render, and bind to
             // framebuffer to which we rander.

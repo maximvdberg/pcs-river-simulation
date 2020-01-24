@@ -29,7 +29,7 @@ void main() {
         vec2 u = vec2(float(packDouble2x32(color_1.rg)),
                       float(packDouble2x32(color_1.ba)));
 
-        o_color = vec4(u_color.rgb * length(u) / 0.5, u_color.a);
+        o_color = vec4(u_color.rgb * length(u), u_color.a);
         // o_color = vec4(color_2.g, color_2.g, color_2.g, u_color.a);
 
         // o_color = vec4(u_color.rgb * rho * 0.2, u_color.a);
