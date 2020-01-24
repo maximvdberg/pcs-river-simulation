@@ -147,6 +147,13 @@ void LatticeBoltzmann::handleInput( GLRenderer& renderer, InputData& input ) {
         paused = !paused;
     }
 
+    // Frame advance if paused.
+    runFrame = false;
+    if (input.keyMap[SDL_SCANCODE_F] == 2) {
+        runFrame = true;
+    }
+
+
     // Add flow.
     if (input.keyMap[SDL_SCANCODE_S] == 2) {
         renderFlow(renderer, renderer.getBlankTexture(), 1, height/2-100, 1, 200);
@@ -179,7 +186,7 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
 
     handleInput(renderer, input);
 
-    if (!paused || input.keyMap[SDL_SCANCODE_F] == 2) {
+    if (!paused || runFrame) {
 
         renderer.useProgram(programs[0]);
         renderer.updateViewport(width, height);
@@ -200,11 +207,12 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
             ++frame;
         }
 
-        readPixels(renderer, input);
 
         // Render the results.
         renderer.resetProgram();
     }
+
+    readPixels(renderer, input);
 
     renderer.renderToScreen();
     renderer.updateViewport(windowWidth, windowHeight);
@@ -258,8 +266,8 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
         if (input.keyMap[SDL_SCANCODE_H] == 0) {
             const int size = 8;
             renderer.setRenderColor(1.0, 0.0, 0.0);
-            renderer.renderRectangle(screenX + cursorX, screenY + cursorY-size/2, 1.f, size);
-            renderer.renderRectangle(screenX + cursorX-size/2, screenY + cursorY, size, 1.f);
+            renderer.renderRectangle(screenX + cursorX * screenScale, screenY + cursorY * screenScale-size/2, 1.f, size);
+            renderer.renderRectangle(screenX + cursorX * screenScale - size/2, screenY + cursorY * screenScale, size, 1.f);
         }
     }
 
@@ -272,7 +280,6 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
         if (settings[i])
             renderer.renderRectangle(10*i, 0, 10, 10);
     }
-
 
     gl::checkErrors("CA end");
 }
@@ -289,35 +296,64 @@ void LatticeBoltzmann::readPixels( GLRenderer& renderer, InputData& input ) {
     }
 
     if (input.keyMap[SDL_BUTTON_LEFT] == 1) {
-        cursorX = input.cursorX - screenX;
-        cursorY = input.cursorY - screenY;
+        cursorX = (input.cursorX - screenX) / screenScale;
+        cursorY = (input.cursorY - screenY)  / screenScale;
         posChanged = true;
     }
 
 
     if (cursorX >= 0 && cursorX < width &&
         cursorY >= 0 && cursorY < height &&
-        (!paused || posChanged)) {
+        (input.keyMap[SDL_SCANCODE_V] > 0 || posChanged)) {
 
         // glBindTextures(0, 7, buffers[frame % 2].texture);
-        // glBindFramebuffer(GL_FRAMEBUFFER, buffers[(frame + 1) % 2].fbo);
+        // glBindFramebuffer(GL_READ_FRAMEBUFFER, buffers[(frame) % 2].fbo);
 
-        // const Buffers& buf = buffers[frame % 2];
-        // renderer.renderToTexture(buf.texture[0]);
-        // glReadBuffer(GL_COLOR_ATTACHMENT0);
+        const Buffers& buf = buffers[frame % 2];
+        glBindFramebuffer(GL_FRAMEBUFFER, buf.fbo);
 
-        // gl::checkErrors("CA end1");
-        // GLubyte pixels[4*4*4];
-        // glReadPixels(0, 0, 4, 4, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+        unsigned data[4];
+        double vals[12]; // ux, uy, rho, f[9]
 
-        // float pixel[4];
-        // gl::checkErrors("CA end2");
-        // glReadPixels(cursorX, cursorY, 1, 1, GL_RGBA, GL_UNSIGNED_INT, &pixel);
-        // gl::checkErrors("CA end3");
+        // Get the data (contains walls and such).
+        glReadBuffer(GL_COLOR_ATTACHMENT0);
+        glReadPixels(cursorX, cursorY, 1, 1, GL_RGBA_INTEGER, GL_UNSIGNED_INT, &data);
 
-        // print("data", pixel[0], pixel[1], pixel[2], pixel[3], lwidth(10), lsepr(" "), lalignl());
+        // Get the double values.
+        for (int i = 0; i < textureCount - 1; ++i) {
+            glReadBuffer(GL_COLOR_ATTACHMENT1 + i);
+            glReadPixels(cursorX, cursorY, 1, 1, GL_RGBA_INTEGER, GL_UNSIGNED_INT, &vals[i*2]);
+        }
 
+        int dw = 12;
+
+        std::cout << "------- Sherlock Data --------" << std::endl;
+        std::cout << "location: " << std::setw(5) << toString(cursorX)
+                  << ", " << std::setw(5) << toString(cursorY) << std::endl;
+
+        // Output data.
+        std::cout << "data: ";
+        for (unsigned u : data) std::cout << std::setw(dw) << toString(u);
+        std::cout << std::endl;
+
+        // Output u and rho.
+        std::cout << "u   = (" << std::setw(dw) << toString(vals[0])
+                  << ", " << std::setw(dw) << toString(vals[1]) << ")" << std::endl;
+        std::cout << "rho =  " << std::setw(dw) << toString(vals[2]) << std::endl;
+
+        // Output f values.
+        std::cout << "f values:";
+        int j = 0;
+        for (int i : {6,2,5,3,0,1,7,4,8}) {
+            if (j++ % 3 == 0) std::cout << std::endl;
+            std::cout << std::setw(dw) << toString(vals[i + 3]);
+        }
+
+        std::cout << std::endl << std::endl << std::flush;
+
+        renderer.renderToScreen();
     }
+
 
     // glBindTexture(GL_TEXTURE_2D, 0);
 

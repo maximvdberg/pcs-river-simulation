@@ -198,11 +198,11 @@ void main() {
 
         if (!isIndestructible) {
             double press_x = f[1]*double(f[1]>0.0) + f[3]*double(f[3]>0.0) + f[5]*double(f[5]>0.0) +
-                            f[6]*double(f[6]>0.0) + f[7]*double(f[7]>0.0) + f[8]*double(f[8]>0.0);
-                            // E + NE + SE - W - NW - SW
+                             f[6]*double(f[6]>0.0) + f[7]*double(f[7]>0.0) + f[8]*double(f[8]>0.0);
+                             // E + NE + SE - W - NW - SW
             double press_y = f[2]*double(f[2]>0.0) + f[4]*double(f[4]>0.0) + f[5]*double(f[5]>0.0) +
-                            f[6]*double(f[6]>0.0) + f[7]*double(f[7]>0.0) + f[8]*double(f[8]>0.0);
-                            // N + NE + NW - S - SE - SW
+                             f[6]*double(f[6]>0.0) + f[7]*double(f[7]>0.0) + f[8]*double(f[8]>0.0);
+                             // N + NE + NW - S - SE - SW
 
             double press = sqrt(press_x*press_x + press_y*press_y);
             rho = press;

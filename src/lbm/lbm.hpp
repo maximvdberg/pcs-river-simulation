@@ -53,6 +53,7 @@ namespace pcs {
         unsigned frame;
 
         bool paused;
+        bool runFrame;
         bool settings[4];
 
         float screenX, screenY, screenScale;
