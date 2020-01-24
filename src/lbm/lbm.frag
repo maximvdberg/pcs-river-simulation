@@ -44,8 +44,8 @@ const double delta_t = 1.0;                  // Time step
 double c = delta_x / delta_t;                // Lattice speed
 double omega = 2 / (6 * viscosity * delta_t
                    / (delta_x * delta_x) + 1);  // Parameter for "relaxation"
-const dvec2 u_slope = dvec2(0.0001,0.0);                // Initial in-flow speed
-const dvec2 u0 = dvec2(0.0,0.0);                // Initial in-flow speed
+const dvec2 u0 = dvec2(0.2,0.0);                // Initial in-flow speed
+const dvec2 u_slope = dvec2(0.000,0.0);
 
 
 const dvec2 e[9] = {dvec2(0., 0.),  dvec2(1., 0.),   dvec2(0., 1.),
@@ -161,25 +161,29 @@ void main() {
     dvec2 u = vec2(0.0);
     double feq[9];
 
-    for (uint i = 0; i < 9; i++) {
-        f[i] = abs(f[i]);
-        if (f[i] < 0) {
+    // Collide
+    if (!isWall) {
+        for (uint i = 0; i < 9; i++) {
+            f[i] = abs(f[i]);
+            if (f[i] < 0) {
+            }
         }
-    }
 
-    // Collide:
-    for (uint i = 0; i < 9; i++) {
-        rho += f[i];
-        u += e[i] * f[i];
+        for (uint i = 0; i < 9; i++) {
+            rho += f[i];
+            u += e[i] * f[i];
+        }
+        double u_len = length(u);
+        u += u_slope;
+        u *= u_len / length(u);
+        u *= c / rho;
     }
-    /* u += u_slope; */
-    u *= c / rho;
 
 
     if (!isWall && !isSource) {
         // Interpolate f with feq
         for (uint i = 0; i < 9; i++) {
-            f[i] = (1 - omega) * f[i] + omega * calc_feq(i, rho, u);
+            f[i] = max(0,(1 - omega) * f[i] + omega * calc_feq(i, rho, u));
         }
 
         // Sedimentation.
@@ -232,19 +236,22 @@ void main() {
     }
     else { // is Source
         // Flow to the right.
+        u = dvec2(length(u),0);
+
         if (u_settings[0] && data.b != 0) {
-            u = dvec2(length(u),0) + u0;
-
-            for (uint i = 0; i < 9; i++) {
-                f[i] = calc_feq(i, rho, u);
-            }
-
-            /* f[1] += fW; */
-            /* f[5] += fNW; */
-            /* f[8] += fSW; */
-
-            return;
+            u += u0;
         }
+
+        for (uint i = 0; i < 9; i++) {
+            f[i] = calc_feq(i, rho, u);
+        }
+
+        f[3] = 0;
+        f[6] = 0;
+        f[7] = 0;
+
+
+        return;
     }
 
     // Ouput to the textures.
