@@ -6,7 +6,7 @@ using namespace pcs;
 
 LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer ) {
 
-    backgroundTexture = gl::loadTexture("assets/river3.bmp", &width, &height);
+    backgroundTexture = gl::loadTexture("assets/Omega.bmp", &width, &height);
 
     // width = 1000;
     // height = 500;
@@ -194,7 +194,7 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
 
         glUniform4i(u_settings, settings[0], settings[1], settings[2], settings[3]);
 
-        for (unsigned i = 0; i < 10; ++i) {
+        for (unsigned i = 0; i < 1; ++i) {
 
             // Bind the textures from which we render, and bind to
             // framebuffer to which we rander.
