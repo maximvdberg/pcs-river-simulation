@@ -38,16 +38,16 @@ layout(location = 10) uniform bvec4 u_settings;
 
 
 // Some constants.
-const double viscosity = 0.01;               // Viscosity
+const double viscosity = 0.0005;              // Viscosity
 const double delta_x = 1.0;                  // Lattice spacing
 const double delta_t = 1.0;                  // Time step
 double c = delta_x / delta_t;                // Lattice speed
 double omega = 2 / (6 * viscosity * delta_t
                    / (delta_x * delta_x) + 1);  // Parameter for "relaxation"
-const dvec2 u0 = dvec2(0.1,0.0);                // Initial in-flow speed
+const dvec2 u0 = dvec2(0.10,0.0);                // Initial in-flow speed
 const double rho0 = 1.0;
 
-const dvec2 u_slope = dvec2(0.1,0.0);
+const dvec2 u_slope = dvec2(0.000,0.0);
 
 
 const dvec2 e[9] = {dvec2(0., 0.),  dvec2(1., 0.),   dvec2(0., 1.),
@@ -66,7 +66,7 @@ const double w[9] = {4. /  9., 1. /  9., 1. /  9.,
 
 // Constants for corrosion activation curve
 const float cor_act   = 1.0;      // Centre of the curve
-const float cor_lim   = 0.08;     // Maximum probability
+const float cor_lim   = 0.12;     // Maximum probability
 const float cor_slope = 6.0;      // Slope of the curve
 
 // Constants for sedimentation activation curve
@@ -112,6 +112,11 @@ double get2f( in usampler2D textr, in vec2 pos ) {
     return packDouble2x32(texture(textr, pos).ba);
 }
 
+// Get the index of the opposite direction
+uint inverti( in uint i ) {
+    return ((i + 1)%4 + 1) * uint(0 < i && i < 5) + ((i - 3)%4 + 5) * uint(i > 4);
+}
+
 
 double calc_feq( in uint i , in double rho, in dvec2 u, in double udotu ) {
     double edotu_c = 3.0*dot(e[i], u) / c;
@@ -141,6 +146,9 @@ void main() {
         get2f(u_textures[6], v_tex_coords - pixel_size*ef[8])  // f8
     };
 
+    // Memory for force and bounce-back calculations.
+    double phi[9] = { f[0], f[1], f[2], f[3], f[4], f[5], f[6], f[7], f[8] };
+
 
     // Make the wall.
     if (data.g != 0) {
@@ -148,9 +156,9 @@ void main() {
         data.a = 1;
 
         // Invert f_i's.
-        // for (uint i = 0; i < 9; i++) {
-        //     f[i] = -abs(f[i]);
-        // }
+        /* for (uint i = 1; i < 9; i++) { */
+        /*     f[i] = -abs(f[i]); */
+        /* } */
     }
 
     bool isWall = data.a != 0;
@@ -166,16 +174,19 @@ void main() {
         for (uint i = 0; i < 9; i++) {
             f[i] = abs(f[i]);
         }
+    }
 
-        for (uint i = 0; i < 9; i++) {
-            rho += f[i];
-            u += e[i] * f[i];
-        }
-        double u_len = length(u);
+    for (uint i = 0; i < 9; i++) {
+        rho += f[i] * double(f[i] > 0);
+        u += e[i] * f[i] * double(f[i] > 0);
+    }
+    double u_len = length(u);
+    if (u_len > 0) {
         u += u_slope;
         u *= u_len / length(u);
         u *= c / rho;
     }
+
 
 
     if (!isWall && !isSource) {
@@ -185,7 +196,7 @@ void main() {
         // Interpolate f with feq
         double udotu = dot(u,u);
         for (uint i = 0; i < 9; i++) {
-            f[i] = (1 - omega) * f[i] + omega * calc_feq(i, rho, u, udotu);
+            f[i] = max(0,(1 - omega) * f[i] + omega * calc_feq(i, rho, u, udotu));
         }
 
         // Sedimentation.
@@ -194,53 +205,78 @@ void main() {
         }
     }
     else if (isWall && !isSource) {
+        // Bounce back
+        const double modmod = 0.99;
+
+        f[2] = -abs(phi[4]) * modmod; // N -> S
+        f[3] = -abs(phi[1]) * modmod; // W -> E
+        f[4] = -abs(phi[2]) * modmod; // S -> N
+        f[1] = -abs(phi[3]) * modmod; // E -> W
+
+        f[6] = -abs(phi[8]) * modmod; // NW -> SE
+        f[7] = -abs(phi[5]) * modmod; // SW -> NE
+        f[8] = -abs(phi[6]) * modmod; // SE -> NW
+        f[5] = -abs(phi[7]) * modmod; // NE -> SW
 
         bool isIndestructible = data.r != 0;
-
         if (!isIndestructible) {
-            double press_x = f[1]*double(f[1]>0.0) + f[5]*double(f[5]>0.0) + f[8]*double(f[8]>0.0) -
-                             f[3]*double(f[3]>0.0) - f[6]*double(f[6]>0.0) - f[7]*double(f[7]>0.0);
-                             // E + NE + SE - W - NW - SW
-            double press_y = f[2]*double(f[2]>0.0) + f[5]*double(f[5]>0.0) + f[6]*double(f[6]>0.0) -
-                             f[4]*double(f[4]>0.0) - f[8]*double(f[8]>0.0) - f[7]*double(f[7]>0.0);
-                             // N + NE + NW - S - SE - SW
+            // Calculate the momentum exchange
+            dvec2 F = e[1] * (phi[1] + f[1]) * double(phi[1] > 0) + // E  <-> W
+                      e[2] * (phi[2] + f[2]) * double(phi[2] > 0) + // N  <-> S
+                      e[3] * (phi[3] + f[3]) * double(phi[3] > 0) + // W  <-> E
+                      e[4] * (phi[4] + f[4]) * double(phi[4] > 0) + // S  <-> N
+                      e[5] * (phi[5] + f[5]) * double(phi[5] > 0) + // NE <-> SW
+                      e[6] * (phi[6] + f[6]) * double(phi[6] > 0) + // NW <-> SE
+                      e[7] * (phi[7] + f[7]) * double(phi[7] > 0) + // SW <-> NE
+                      e[8] * (phi[8] + f[8]) * double(phi[8] > 0);  // SE <-> NW
 
-            double press = sqrt(press_x*press_x + press_y*press_y);
-            rho = press;
+            double press = length(F) * 1;
 
-            if (u_settings[3]) {
-                rho = 1.0;
-            }
-
-            /* if (press > 0.28) { */
-            if (u_settings[1] && (cor(float(press)) > rand(vec2(press*texture_loc)) + 0.0002)) {
+            if (u_settings[1] && (cor(float(press) - 0.001) > rand(vec2(press*texture_loc)))) {
                 // Corrosion, remove the wall
                 data.a = 0;
+
+                // Adjust for the momentum of the 'moving' wall.
+                dvec2 mom = dvec2(double(u.x >= 0) + double(u.x < 0),double(u.x >= 0) + double(u.y < 0));
+                f[2] = min(0, f[2] - 2 / (c*c) * w[4] * dot(e[4],mom));                //
+                f[3] = min(0, f[3] - 2 / (c*c) * w[1] * dot(e[1],mom));                //
+                f[4] = min(0, f[4] - 2 / (c*c) * w[2] * dot(e[2],mom));                //
+                f[1] = min(0, f[1] - 2 / (c*c) * w[3] * dot(e[3],mom));                //
+
+                f[6] = min(0, f[6] - 2 / (c*c) * w[8] * dot(e[8],mom));
+                f[7] = min(0, f[7] - 2 / (c*c) * w[5] * dot(e[5],mom));
+                f[8] = min(0, f[8] - 2 / (c*c) * w[6] * dot(e[6],mom));
+                f[5] = min(0, f[5] - 2 / (c*c) * w[7] * dot(e[7],mom));
+            } else {
+                rho = press;
+                if (u_settings[3]) {
+                    rho = 1.0;
+                }
             }
         }
 
-        // Bounce back
-        double f2c = f[2]; // N
-        double f3c = f[3]; // W
-        double f6c = f[6]; // NW
-        double f7c = f[7]; // SW
+        // Bounce back (old version)
+        // double f2c = f[2]; // N
+        // double f3c = f[3]; // W
+        // double f6c = f[6]; // NW
+        // double f7c = f[7]; // SW
 
-        const double modmod = 1.0;
+        // const double modmod = 1.0;
 
-        f[2] = -abs(f[4])*modmod; // N -> S
-        f[3] = -abs(f[1])*modmod; // W -> E
-        f[4] = -abs(f2c)*modmod;  // S -> N
-        f[1] = -abs(f3c)*modmod;  // E -> W
+        // f[2] = -abs(f[4])*modmod; // N -> S
+        // f[3] = -abs(f[1])*modmod; // W -> E
+        // f[4] = -abs(f2c)*modmod;  // S -> N
+        // f[1] = -abs(f3c)*modmod;  // E -> W
 
-        f[6] = -abs(f[8])*modmod; // NW -> SE
-        f[7] = -abs(f[5])*modmod; // SW -> NE
-        f[8] = -abs(f6c)*modmod;  // SE -> NW
-        f[5] = -abs(f7c)*modmod;  // NE -> SW
+        // f[6] = -abs(f[8])*modmod; // NW -> SE
+        // f[7] = -abs(f[5])*modmod; // SW -> NE
+        // f[8] = -abs(f6c)*modmod;  // SE -> NW
+        // f[5] = -abs(f7c)*modmod;  // NE -> SW
 
     }
     else { // is Source
         // Flow to the right.
-        u = dvec2(0.0); // dvec2(length(u),0);
+        u = dvec2(0.0);//dvec2(length(u),0);
 
         if (u_settings[0] && data.b != 0) {
             u += u0;
