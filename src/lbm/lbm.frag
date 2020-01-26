@@ -38,7 +38,7 @@ layout(location = 10) uniform bvec4 u_settings;
 
 
 // Some constants.
-const double viscosity = 0.005;              // Viscosity
+const double viscosity = 0.01;               // Viscosity
 const double delta_x = 1.0;                  // Lattice spacing
 const double delta_t = 1.0;                  // Time step
 double c = delta_x / delta_t;                // Lattice speed
@@ -47,7 +47,7 @@ double omega = 2 / (6 * viscosity * delta_t
 const dvec2 u0 = dvec2(0.1,0.0);                // Initial in-flow speed
 const double rho0 = 1.0;
 
-const dvec2 u_slope = dvec2(0.0001,0.0);
+const dvec2 u_slope = dvec2(0.1,0.0);
 
 
 const dvec2 e[9] = {dvec2(0., 0.),  dvec2(1., 0.),   dvec2(0., 1.),
@@ -179,6 +179,9 @@ void main() {
 
 
     if (!isWall && !isSource) {
+
+
+
         // Interpolate f with feq
         double udotu = dot(u,u);
         for (uint i = 0; i < 9; i++) {
@@ -222,7 +225,7 @@ void main() {
         double f6c = f[6]; // NW
         double f7c = f[7]; // SW
 
-        const double modmod = 0.999;
+        const double modmod = 1.0;
 
         f[2] = -abs(f[4])*modmod; // N -> S
         f[3] = -abs(f[1])*modmod; // W -> E

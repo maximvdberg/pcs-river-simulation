@@ -6,7 +6,7 @@ using namespace pcs;
 
 LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer ) {
 
-    backgroundTexture = gl::loadTexture("assets/river3.bmp", &width, &height);
+    backgroundTexture = gl::loadTexture("assets/poiseuille.bmp", &width, &height);
 
     // width = 1000;
     // height = 500;
@@ -194,7 +194,7 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
 
         glUniform4i(u_settings, settings[0], settings[1], settings[2], settings[3]);
 
-        for (unsigned i = 0; i < 10; ++i) {
+        for (unsigned i = 0; i < 20; ++i) {
 
             // Bind the textures from which we render, and bind to
             // framebuffer to which we rander.
@@ -263,22 +263,24 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
     if (cursorX >= 0 && cursorX < width &&
         cursorY >= 0 && cursorY < height) {
 
-        if (input.keyMap[SDL_SCANCODE_H] == 0) {
-            const int size = 8;
-            renderer.setRenderColor(1.0, 0.0, 0.0);
-            renderer.renderRectangle(screenX + cursorX * screenScale, screenY + cursorY * screenScale-size/2, 1.f, size);
-            renderer.renderRectangle(screenX + cursorX * screenScale - size/2, screenY + cursorY * screenScale, size, 1.f);
-        }
+        const int size = 8;
+        renderer.setRenderColor(1.0, 0.0, 0.0);
+        renderer.renderRectangle(screenX + cursorX * screenScale,
+                                 screenY + cursorY * screenScale-size/2,
+                                 1.f, size);
+        renderer.renderRectangle(screenX + cursorX * screenScale - size/2,
+                                 screenY + cursorY * screenScale,
+                                 size, 1.f);
     }
 
-    // Render the settings
-    int size = 10;
+    // Render the settings.
+    constexpr int size = 10;
     renderer.setRenderColor(0.0, 0.0, 1.0);
     for (int i = 0; i < 4; i++) {
         renderer.setRenderColor(i % 2, i % 3, (i+1) % 2);
 
         if (settings[i])
-            renderer.renderRectangle(10*i, 0, 10, 10);
+            renderer.renderRectangle(size*i, 0, size, size);
     }
 
     gl::checkErrors("CA end");
@@ -308,7 +310,6 @@ void LatticeBoltzmann::readPixels( GLRenderer& renderer, InputData& input ) {
 
         // glBindTextures(0, 7, buffers[frame % 2].texture);
         // glBindFramebuffer(GL_READ_FRAMEBUFFER, buffers[(frame) % 2].fbo);
-
         const Buffers& buf = buffers[frame % 2];
         glBindFramebuffer(GL_FRAMEBUFFER, buf.fbo);
 
@@ -317,12 +318,14 @@ void LatticeBoltzmann::readPixels( GLRenderer& renderer, InputData& input ) {
 
         // Get the data (contains walls and such).
         glReadBuffer(GL_COLOR_ATTACHMENT0);
-        glReadPixels(cursorX, cursorY, 1, 1, GL_RGBA_INTEGER, GL_UNSIGNED_INT, &data);
+        glReadPixels(cursorX, cursorY, 1, 1, GL_RGBA_INTEGER,
+                     GL_UNSIGNED_INT, &data);
 
         // Get the double values.
         for (int i = 0; i < textureCount - 1; ++i) {
             glReadBuffer(GL_COLOR_ATTACHMENT1 + i);
-            glReadPixels(cursorX, cursorY, 1, 1, GL_RGBA_INTEGER, GL_UNSIGNED_INT, &vals[i*2]);
+            glReadPixels(cursorX, cursorY, 1, 1, GL_RGBA_INTEGER,
+                         GL_UNSIGNED_INT, &vals[i*2]);
         }
 
         int dw = 12;
@@ -338,8 +341,10 @@ void LatticeBoltzmann::readPixels( GLRenderer& renderer, InputData& input ) {
 
         // Output u and rho.
         std::cout << "u   = (" << std::setw(dw) << toString(vals[0])
-                  << ", " << std::setw(dw) << toString(vals[1]) << ")" << std::endl;
-        std::cout << "rho =  " << std::setw(dw) << toString(vals[2]) << std::endl;
+                  << ", " << std::setw(dw) << toString(vals[1])
+                  << ")" << std::endl;
+        std::cout << "rho =  " << std::setw(dw) << toString(vals[2])
+                  << std::endl;
 
         // Output f values.
         std::cout << "f values:";
@@ -355,6 +360,34 @@ void LatticeBoltzmann::readPixels( GLRenderer& renderer, InputData& input ) {
     }
 
 
+
+    if (input.keyMap[SDL_SCANCODE_X] == 2) {
+        const Buffers& buf = buffers[frame % 2];
+        glBindFramebuffer(GL_FRAMEBUFFER, buf.fbo);
+
+        unsigned data[4];
+        double u[2]; // ux, uy, rho, f[9]
+
+        std::cout << "[";
+        for (int y = 0; y < height; y++) {
+
+            // Get the data (contains walls and such).
+            glReadBuffer(GL_COLOR_ATTACHMENT0);
+            glReadPixels(cursorX, y, 1, 1, GL_RGBA_INTEGER,
+                         GL_UNSIGNED_INT, &data);
+
+            glReadBuffer(GL_COLOR_ATTACHMENT1);
+            glReadPixels(cursorX, y, 1, 1, GL_RGBA_INTEGER,
+                         GL_UNSIGNED_INT, &u[0]);
+
+            if (data[3] == 0) {
+                std::cout << toString(std::sqrt(u[0]*u[0] + u[1]*u[1])) << ", ";
+            }
+
+        }
+        std::cout << "]" << std::endl << std::endl;
+        renderer.renderToScreen();
+    }
     // glBindTexture(GL_TEXTURE_2D, 0);
 
     //static float* img = new float[width*height*4];
