@@ -4,13 +4,28 @@
 
 using namespace pcs;
 
+// Flow constants.
+static const double e_x[9] = {0., 1.,  0., -1., 0.,  1., -1., -1., 1.};
+static const double e_y[9] = {0., 0., 1., 0., -1., 1., 1.,  -1., -1.};
+static const double w[9] = {4./9., 1./9., 1./9., 1./9., 1./9.,
+                            1./36., 1./36., 1./36., 1./36.};
+static const double delta_x = 1.0;                  // Lattice spacing
+static const double delta_t = 1.0;                  // Time step
+static const double c = delta_x / delta_t;
+static const double rho = 1.0;
+
+
+static double calc_feq( int i, double u_x, double u_y ) {
+    double udotu = u_x * u_x + u_y * u_y;
+    double edotu_c = 3.0*(e_x[i]*u_x + e_y[i]*u_y) / c;
+    return w[i] * rho * (1 + edotu_c + edotu_c*edotu_c / 2.0 -
+                         1.5 * udotu / (c * c));
+}
+
+
 LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer ) {
 
-<<<<<<< HEAD
-    backgroundTexture = gl::loadTexture("assets/poiseuille.bmp", &width, &height);
-=======
     backgroundTexture = gl::loadTexture("assets/Omega.bmp", &width, &height);
->>>>>>> 6daf02c70c8dae2c47fd9d6ac316933a55807b84
 
     // width = 1000;
     // height = 500;
@@ -79,15 +94,14 @@ LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer ) {
 
 
     // Initialise the textures / f_i's.
-    double f[10] = { 0.0, // <-- filler.
-        0.43777778, 0.10944444444444444, 0.14777777777777779,
-        0.0811111111111111, 0.10944444444444444, 0.036944444444444446,
-        0.020277777777777777, 0.020277777777777777, 0.036944444444444446
-    };
-
+    double f_eq[10] = { 0.0 }; // <-- filler
+    for (int i = 0; i < 9; i++) {
+        f_eq[i+1] = calc_feq(i, 0.0, 0.0);
+        print(f_eq[i+1]);
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, buffers[0].fbo);
     for (uint i = 0; i < 5; ++i) {
-        glClearBufferuiv(GL_COLOR, i + 2, (GLuint*) &f[i*2]);
+        glClearBufferuiv(GL_COLOR, i + 2, (GLuint*) &f_eq[i*2]);
     }
 
     renderer.renderToTexture(buffers[0].texture[0]);
