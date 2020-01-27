@@ -25,7 +25,7 @@ static double calc_feq( int i, double u_x, double u_y ) {
 
 LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer ) {
 
-    backgroundTexture = gl::loadTexture("assets/Omega.bmp", &width, &height);
+    backgroundTexture = gl::loadTexture("assets/river3.bmp", &width, &height);
 
     // width = 1000;
     // height = 500;
@@ -361,6 +361,9 @@ void LatticeBoltzmann::readPixels( GLRenderer& renderer, InputData& input ) {
         std::cout << "u   = (" << std::setw(dw) << toString(vals[0])
                   << ", " << std::setw(dw) << toString(vals[1])
                   << ")" << std::endl;
+        std::cout << "u2" << toString(std::sqrt(vals[0]*vals[0] +
+                                                vals[1]*vals[1])) << std::endl;
+
         std::cout << "rho =  " << std::setw(dw) << toString(vals[2])
                   << std::endl;
 
@@ -398,33 +401,15 @@ void LatticeBoltzmann::readPixels( GLRenderer& renderer, InputData& input ) {
             glReadPixels(cursorX, y, 1, 1, GL_RGBA_INTEGER,
                          GL_UNSIGNED_INT, &u[0]);
 
+
             if (data[3] == 0) {
-                std::cout << toString(std::sqrt(u[0]*u[0] + u[1]*u[1])) << ", ";
+                //std::cout << toString(std::sqrt(u[0]*u[0] + u[1]*u[1])) << ", ";
+                std::cout << toString(u[0]) << ", ";
             }
 
         }
         std::cout << "]" << std::endl << std::endl;
         renderer.renderToScreen();
     }
-    // glBindTexture(GL_TEXTURE_2D, 0);
 
-    //static float* img = new float[width*height*4];
-    //glBindTexture(GL_TEXTURE_2D, buffers[frame % 2].texture[1]);
-    //glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, (GLvoid*) img);
-    //glBindTexture(GL_TEXTURE_2D, 0);
-
-    // float min = 123456.f, max = 0.f;
-    // for (size_t i = 0; i < 1000*500*4; i += 4) {
-    //     min = img[i] < min ? img[i] : min;
-    //     max = img[i] > max ? img[i] : max;
-    //     if (img[i] <= 0.f) {
-    //         int j = i - i % 4;
-    //         //print(j, img[j], img[j+1], img[j+2], img[j+3]);
-    //     }
-    // }
-    // print(min, max);
-    // if (min < 0.f) {
-    //     paused = true;
-    //     break;
-    // }
 }

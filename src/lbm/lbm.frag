@@ -38,13 +38,13 @@ layout(location = 10) uniform bvec4 u_settings;
 
 
 // Some constants.
-const double viscosity = 0.01;              // Viscosity
+const double viscosity = 0.001;              // Viscosity
 const double delta_x = 1.0;                  // Lattice spacing
 const double delta_t = 1.0;                  // Time step
 double c = delta_x / delta_t;                // Lattice speed
-double omega = 2 / (6 * viscosity * delta_t
-                   / (delta_x * delta_x) + 1);  // Parameter for "relaxation"
-const dvec2 u0 = dvec2(0.10,0.0);                // Initial in-flow speed
+double omega =  2 / (6 * viscosity * delta_t
+                     / (delta_x * delta_x) + 1);  // Parameter for "relaxation"
+const dvec2 u0 = dvec2(0.1,0.0);                // Initial in-flow speed
 const double rho0 = 1.0;
 
 const dvec2 u_slope = dvec2(0.0,0.0);
@@ -168,16 +168,16 @@ void main() {
     double feq[9];
 
     // Reinvert the inverted f_i's.
-    if (!isWall || true) {
-        for (uint i = 1; i < 9; i++) {
-            f[i] = abs(f[i]);
-        }
-    }
+    // if (!isWall || true) {
+    //     for (uint i = 1; i < 9; i++) {
+    //         f[i] = abs(f[i]);
+    //     }
+    // }
 
     // Calculate rho and U
     for (uint i = 0; i < 9; i++) {
-        rho += f[i];// * double(f[i] > 0);
-        u += e[i] * f[i];// * double(f[i] > 0);
+        rho += abs(f[i]);// * double(f[i] > 0);
+        u += e[i] * abs(f[i]);// * double(f[i] > 0);
     }
     u *= c / rho;
 
@@ -190,24 +190,68 @@ void main() {
 
 
     // Collision step.
+    if (!isSource) {
+
+        // Interpolate f with feq
+        double udotu = dot(u, u);
+        for (uint i = 0; i < 9; i++) {
+            f[i] = max(0.0, (1 - omega) * abs(f[i]) + omega * calc_feq(i, rho, u, udotu));
+        }
+
+        // Sedimentation.
+        if (u_settings[2] && sed(float(length(u))) > rand(vec2(u)*texture_loc) + 0.0001) {
+            data.g = 1; // Add wall next step.
+        }
+    }
+
 
     if (isWall && !isSource) {
 
-        // Bounce back
-        const double momentum_mod = 1.00;
+        bool borderWall = false;
+
+        for (uint i = 1; i < 9; i++) {
+            if (f[i] > 0.0) {
+                borderWall = true;
+                break;
+            }
+        }
 
         // Memory for force and bounce-back calculations.
-        double f2[9] = {f[0], f[1], f[2], f[3], f[4], f[5], f[6], f[7], f[8]};
+        double f2[9] = {abs(f[0]), abs(f[1]), abs(f[2]),
+                        abs(f[3]), abs(f[4]), abs(f[5]),
+                        abs(f[6]), abs(f[7]), abs(f[8])};
 
-        f[2] = -abs(f2[4]) * momentum_mod; // N -> S
-        f[3] = -abs(f2[1]) * momentum_mod; // W -> E
-        f[4] = -abs(f2[2]) * momentum_mod; // S -> N
-        f[1] = -abs(f2[3]) * momentum_mod; // E ->f2
+        if (!borderWall || true) {
+            // Bounce back
+            const double momentum_mod = 1.00;
 
-        f[6] = -abs(f2[8]) * momentum_mod; // NW -> SE
-        f[7] = -abs(f2[5]) * momentum_mod; // SW -> NE
-        f[8] = -abs(f2[6]) * momentum_mod; // SE -> NW
-        f[5] = -abs(f2[7]) * momentum_mod; // NE -> SW
+
+            f[2] = -f2[4] * momentum_mod; // N -> S
+            f[3] = -f2[1] * momentum_mod; // W -> E
+            f[4] = -f2[2] * momentum_mod; // S -> N
+            f[1] = -f2[3] * momentum_mod; // E ->f2
+            f[6] = -f2[8] * momentum_mod; // NW -> SE
+            f[7] = -f2[5] * momentum_mod; // SW -> NE
+            f[8] = -f2[6] * momentum_mod; // SE -> NW
+            f[5] = -f2[7] * momentum_mod; // NE -> SW
+        }
+        else {
+            for (uint i = 1; i < 9; i++) {
+                f[i] = -abs(f[i]);
+            }
+        }
+
+
+        // const double p = 0.0;
+        // const double q = 1 - p;
+        // f[2] = -(f2[2]*p + f2[4]*q); // N -> S
+        // f[3] = -(f2[1]*p + f2[3]*q); // W -> E
+        // f[4] = -(f2[4]*p + f2[2]*q); // S -> N
+        // f[1] = -(f2[1]*p + f2[3]*q); // E ->f2
+        // f[6] = -(f2[6]*p + f2[8]*q); // NW -> SE
+        // f[7] = -(f2[7]*p + f2[5]*q); // SW -> NE
+        // f[8] = -(f2[8]*p + f2[6]*q); // SE -> NW
+        // f[5] = -(f2[5]*p + f2[7]*q); // NE -> SW
 
 
 
@@ -226,7 +270,7 @@ void main() {
 
         bool isIndestructible = data.r != 0;
 
-        if (!isIndestructible) {
+        if (!isIndestructible && borderWall) {
 
             // Calculate the momentum exchange
 
@@ -293,20 +337,8 @@ void main() {
             //     rho = 1.0;
             // }
     }
-    else if (!isSource) {
 
-        // Interpolate f with feq
-        double udotu = dot(u, u);
-        for (uint i = 0; i < 9; i++) {
-            f[i] = max(0.0, (1 - omega) * f[i] + omega * calc_feq(i, rho, u, udotu));
-        }
-
-        // Sedimentation.
-        if (u_settings[2] && sed(float(length(u))) > rand(vec2(u)*texture_loc) + 0.0001) {
-            data.g = 1; // Add wall next step.
-        }
-    }
-    else { // is Source
+    if (isSource) { // is Source
         // Flow to the right.
 
         if (u_settings[0] && data.b != 0) {
