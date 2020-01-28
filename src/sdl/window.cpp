@@ -90,6 +90,7 @@ Window pcs::createOpenGLWindow( const std::string& title, int width, int height 
     else {
         // No vsync :o
         print(INFO_, "Unable to set VSync! SDL Error:", SDL_GetError());
+        SDL_GL_SetSwapInterval(0);
     }
 
     return window;

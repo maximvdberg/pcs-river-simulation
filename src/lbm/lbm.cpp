@@ -28,8 +28,6 @@ LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer, const std::string& riv
     // Load the background texture file, which is the river configuration.
     backgroundTexture = gl::loadTexture(riverFile, &width, &height);
 
-    // width = 1000;
-    // height = 500;
     frame = 0;
     paused = false;
 
@@ -69,7 +67,7 @@ LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer, const std::string& riv
     for (size_t i = 0; i < textureCount; ++i) {
         u_textures[i] = i + 3;
     }
-    u_settings = 10;// u_textures[textureCount - 1] + 1;
+    u_settings = 10;// = u_textures[textureCount - 1] + 1;
 
     // Program setup.
     for (GLuint program : programs) {
@@ -213,7 +211,7 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
 
         glUniform4i(u_settings, settings[0], settings[1], settings[2], settings[3]);
 
-        for (unsigned i = 0; i < 10; ++i) {
+        for (unsigned i = 0; i < 5; ++i) {
 
             // Bind the textures from which we render, and bind to
             // framebuffer to which we rander.
@@ -236,7 +234,8 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
     renderer.renderToScreen();
     renderer.updateViewport(windowWidth, windowHeight);
 
-    bool debugRender = true;
+
+    constexpr bool debugRender = true;
     if (debugRender) {
         float posX = 10.f, posY = 600.f;
         renderer.setRenderColor(1.f, 1.f, 1.f, 1.f);
@@ -296,10 +295,10 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
     constexpr int size = 10;
     renderer.setRenderColor(0.0, 0.0, 1.0);
     for (int i = 0; i < 4; i++) {
-        renderer.setRenderColor(i % 2, i % 3, (i+1) % 2);
-
-        if (settings[i])
+        if (settings[i]) {
+            renderer.setRenderColor(i % 2, i % 3, (i+1) % 2);
             renderer.renderRectangle(size*i, 0, size, size);
+        }
     }
 
     gl::checkErrors("CA end");
@@ -362,9 +361,9 @@ void LatticeBoltzmann::readPixels( GLRenderer& renderer, InputData& input ) {
         std::cout << "u   = (" << std::setw(dw) << toString(vals[0])
                   << ", " << std::setw(dw) << toString(vals[1])
                   << ")" << std::endl;
-        std::cout << "u2" << toString(std::sqrt(vals[0]*vals[0] +
-                                                vals[1]*vals[1])) << std::endl;
-
+        std::cout << "u2  = " << std::setw(dw)
+                  << toString(std::sqrt(vals[0]*vals[0] +
+                                        vals[1]*vals[1])) << std::endl;
         std::cout << "rho =  " << std::setw(dw) << toString(vals[2])
                   << std::endl;
 
