@@ -343,6 +343,14 @@ GLuint gl::genUTexture( int width, int height, const uint8_t* data ) {
 GLuint gl::loadTexture( const std::string& filePath,
                         int* widthPtr, int* heightPtr ) {
 
+    std::ifstream file(filePath);
+    if (!file) {
+        print(INFO_, "File", filePath, "does not exists!", lflush());
+        return 0;
+    }
+    file.close();
+
+
     SDL_Surface* surface = IMG_Load(filePath.c_str());
 
     int width = surface->w;

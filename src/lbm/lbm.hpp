@@ -17,7 +17,7 @@ namespace pcs {
             GLuint fbo;
         };
 
-        LatticeBoltzmann( GLRenderer& renderer );
+        LatticeBoltzmann( GLRenderer& renderer, const std::string& riverFile );
 
         void close();
 

@@ -23,9 +23,10 @@ static double calc_feq( int i, double u_x, double u_y ) {
 }
 
 
-LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer ) {
+LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer, const std::string& riverFile ) {
 
-    backgroundTexture = gl::loadTexture("assets/river3.bmp", &width, &height);
+    // Load the background texture file, which is the river configuration.
+    backgroundTexture = gl::loadTexture(riverFile, &width, &height);
 
     // width = 1000;
     // height = 500;

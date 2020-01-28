@@ -23,9 +23,14 @@
 using namespace pcs;
 
 
-int main() {
+int main( int argc, char** argv ) {
 
     print("~start~");
+
+    // Get the river file we want to simulate.
+    std::string riverFile = "assets/river.bmp";
+    if (argc > 1)
+        riverFile = argv[1];
 
     // Create a window.
     Window window = createOpenGLWindow("Cool :O");
@@ -36,7 +41,7 @@ int main() {
     // Store the input data here, and initialise it.
     InputData input;
 
-    LatticeBoltzmann boltzmann = LatticeBoltzmann(renderer);
+    LatticeBoltzmann boltzmann = LatticeBoltzmann(renderer, riverFile);
 
 
     // We now update untill the window gets closed.

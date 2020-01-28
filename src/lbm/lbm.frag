@@ -36,55 +36,67 @@ layout(location = 10) uniform bvec4 u_settings;
  */
 
 
+ #define ENABLE_SEDIMENTATION
+ #define ENABLE_EROSION
+ #define ENABLE_SLOPE
+ #define ENABLE_FLOW
+
 
 // Some constants.
-const double viscosity = 0.001;              // Viscosity
+const double viscosity = 0.005;             // Viscosity
 const double delta_x = 1.0;                  // Lattice spacing
-const double delta_t = 1.0;                  // Time step
+const double delta_t = 1.0;               // Time step
 double c = delta_x / delta_t;                // Lattice speed
 double omega =  2 / (6 * viscosity * delta_t
                      / (delta_x * delta_x) + 1);  // Parameter for "relaxation"
 const dvec2 u0 = dvec2(0.1,0.0);                // Initial in-flow speed
 const double rho0 = 1.0;
 
+#ifdef ENABLE_SLOPE
 const dvec2 u_slope = dvec2(0.0,0.0);
+#endif
 
 
+// f_i directions.
 const dvec2 e[9] = {dvec2(0., 0.),  dvec2(1., 0.),   dvec2(0., 1.),
                     dvec2(-1., 0.), dvec2(0., -1.),  dvec2(1., 1.),
                     dvec2(-1., 1.), dvec2(-1., -1.), dvec2(1., -1.)};
 
+// Float f_i directions to avoid having to convert from doubles to floats.
 const vec2 ef[9] = {vec2(0., 0.),  vec2(1., 0.),   vec2(0., 1.),
                     vec2(-1., 0.), vec2(0., -1.),  vec2(1., 1.),
                     vec2(-1., 1.), vec2(-1., -1.), vec2(1., -1.)};
 
-// Flow weights.
+// Flow weights for each f_i.
 const double w[9] = {4. /  9., 1. /  9., 1. /  9.,
                      1. /  9., 1. /  9., 1. / 36.,
                      1. / 36., 1. / 36., 1. / 36.};
 
 
-// Constants for corrosion activation curve
-const float cor_act   = 1.0;      // Centre of the curve
-const float cor_lim   = 0.12;     // Maximum probability
-const float cor_slope = 6.0;      // Slope of the curve
-
-// Constants for sedimentation activation curve
-const float sed_act   = 0.001;      // Centre of the curve
-const float sed_lim   = 0.0005;      // Maximum probability
-const float sed_slope = 160.0;     // Slope of the curve
-
-
-float sigma(float x) {
+// The activation probability function.
+float sigma( float x ) {
     return 1 / (1 + exp(-x));
 }
 
-// Corrosion activation curve
-float sigma_a = sigma(-cor_slope * cor_act);
-float cor_scaling = cor_lim / (1 - sigma_a);
-float cor( float x ) {
-    return (sigma(cor_slope * (x - cor_act)) - sigma_a) * cor_scaling;
+// Constants for erosion activation curve
+#ifdef ENABLE_EROSION
+const float ero_act   = 0.00;      // Centre of the curve
+const float ero_lim   = 1.0;     // Maximum probability
+const float ero_slope = 1000.0;      // Slope of the curve
+
+// Erosion activation curve
+float sigma_a = sigma(-ero_slope * ero_act);
+float ero_scaling = ero_lim / (1 - sigma_a);
+float ero( float x ) {
+    return (sigma(ero_slope * (x - ero_act)) - sigma_a) * ero_scaling;
 }
+#endif
+
+// Constants for sedimentation activation curve
+#ifdef ENABLE_SEDIMENTATION
+const float sed_act   = 0.00;      // Centre of the curve
+const float sed_lim   = 0.005;      // Maximum probability
+const float sed_slope = 100.0;     // Slope of the curve
 
 // Sedimentation activation curve
 float sigma_b = sigma(-sed_slope * sed_act);
@@ -92,22 +104,20 @@ float sed_scaling = sed_lim / (1 - sigma_b);
 float sed( float x ) {
     return sed_lim - (sigma(sed_slope * (x - sed_act)) - sigma_b) * sed_scaling;
 }
+#endif
 
 
-
-
-ivec2 pmod( in ivec2 i, in ivec2 n ) {
-    return ivec2(mod(mod(i, n) + n, n));
-}
 
 float rand( in vec2 co ) {
     return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
+// Get the first double from a texture.
 double get1f( in usampler2D textr, in vec2 pos ) {
     return packDouble2x32(texture(textr, pos).rg);
 }
 
+// Get the second double from a texture.
 double get2f( in usampler2D textr, in vec2 pos ) {
     return packDouble2x32(texture(textr, pos).ba);
 }
@@ -146,6 +156,7 @@ void main() {
         get2f(u_textures[6], v_tex_coords - pixel_size*ef[8])  // f8
     };
 
+
     // Make the wall.
     if (data.g != 0) {
         data.g = 0;
@@ -161,101 +172,9 @@ void main() {
     bool isSource = data.b != 0;
 
 
-
-    // Declare rho and u, which we will calculate later.
-    double rho = 0.0;
-    dvec2 u = vec2(0.0);
-    double feq[9];
-
-    // Reinvert the inverted f_i's.
-    // if (!isWall || true) {
-    //     for (uint i = 1; i < 9; i++) {
-    //         f[i] = abs(f[i]);
-    //     }
-    // }
-
-    // Calculate rho and U
-    for (uint i = 0; i < 9; i++) {
-        rho += abs(f[i]);// * double(f[i] > 0);
-        u += e[i] * abs(f[i]);// * double(f[i] > 0);
-    }
-    u *= c / rho;
-
-
-    // double u_len = length(u);
-    // if (u_len > 0.0) {
-    //     u += u_slope;
-    //     u *= u_len / length(u);
-    // }
-
-
-    // Collision step.
-    if (!isSource) {
-
-        // Interpolate f with feq
-        double udotu = dot(u, u);
-        for (uint i = 0; i < 9; i++) {
-            f[i] = max(0.0, (1 - omega) * abs(f[i]) + omega * calc_feq(i, rho, u, udotu));
-        }
-
-        // Sedimentation.
-        if (u_settings[2] && sed(float(length(u))) > rand(vec2(u)*texture_loc) + 0.0001) {
-            data.g = 1; // Add wall next step.
-        }
-    }
-
-
     if (isWall && !isSource) {
 
-        bool borderWall = false;
-
-        for (uint i = 1; i < 9; i++) {
-            if (f[i] > 0.0) {
-                borderWall = true;
-                break;
-            }
-        }
-
         // Memory for force and bounce-back calculations.
-        double f2[9] = {abs(f[0]), abs(f[1]), abs(f[2]),
-                        abs(f[3]), abs(f[4]), abs(f[5]),
-                        abs(f[6]), abs(f[7]), abs(f[8])};
-
-        if (!borderWall || true) {
-            // Bounce back
-            const double momentum_mod = 1.00;
-
-
-            f[2] = -f2[4] * momentum_mod; // N -> S
-            f[3] = -f2[1] * momentum_mod; // W -> E
-            f[4] = -f2[2] * momentum_mod; // S -> N
-            f[1] = -f2[3] * momentum_mod; // E ->f2
-            f[6] = -f2[8] * momentum_mod; // NW -> SE
-            f[7] = -f2[5] * momentum_mod; // SW -> NE
-            f[8] = -f2[6] * momentum_mod; // SE -> NW
-            f[5] = -f2[7] * momentum_mod; // NE -> SW
-        }
-        else {
-            for (uint i = 1; i < 9; i++) {
-                f[i] = -abs(f[i]);
-            }
-        }
-
-
-        // const double p = 0.0;
-        // const double q = 1 - p;
-        // f[2] = -(f2[2]*p + f2[4]*q); // N -> S
-        // f[3] = -(f2[1]*p + f2[3]*q); // W -> E
-        // f[4] = -(f2[4]*p + f2[2]*q); // S -> N
-        // f[1] = -(f2[1]*p + f2[3]*q); // E ->f2
-        // f[6] = -(f2[6]*p + f2[8]*q); // NW -> SE
-        // f[7] = -(f2[7]*p + f2[5]*q); // SW -> NE
-        // f[8] = -(f2[8]*p + f2[6]*q); // SE -> NW
-        // f[5] = -(f2[5]*p + f2[7]*q); // NE -> SW
-
-
-
-        // // Memory for force and bounce-back calculations.
         double phi[9] = {
             get2f(u_textures[2], v_tex_coords), // f0
             get1f(u_textures[3], v_tex_coords), // f1
@@ -270,88 +189,136 @@ void main() {
 
         bool isIndestructible = data.r != 0;
 
-        if (!isIndestructible && borderWall) {
+        if (!isIndestructible) {
 
             // Calculate the momentum exchange
 
             // // Momentum exchange.
-            // dvec2 F = (e[1] * (abs(phi[1]) + abs(f[3])) + // * double(phi[1] > 0) + // E  <-> W
-            //            e[2] * (abs(phi[2]) + abs(f[4])) + // * double(phi[2] > 0) + // N  <-> S
-            //            e[3] * (abs(phi[3]) + abs(f[1])) + // * double(phi[3] > 0) + // W  <-> E
-            //            e[4] * (abs(phi[4]) + abs(f[2])) + // * double(phi[4] > 0) + // S  <-> N
-            //            e[5] * (abs(phi[5]) + abs(f[7])) + // * double(phi[5] > 0) + // NE <-> SW
-            //            e[6] * (abs(phi[6]) + abs(f[8])) + // * double(phi[6] > 0) + // NW <-> SE
-            //            e[7] * (abs(phi[7]) + abs(f[5])) + // * double(phi[7] > 0) + // SW <-> NE
-            //            e[8] * (abs(phi[8]) + abs(f[6]))) * c * delta_x; // * double(phi[8] > 0);  // SE <-> NW
+            dvec2 F = (e[1] * (abs(phi[1]) + f[3]) * double(f[1] > 0) + // E  <-> W
+                       e[2] * (abs(phi[2]) + f[4]) * double(f[2] > 0) + // N  <-> S
+                       e[3] * (abs(phi[3]) + f[1]) * double(f[3] > 0) + // W  <-> E
+                       e[4] * (abs(phi[4]) + f[2]) * double(f[4] > 0) + // S  <-> N
+                       e[5] * (abs(phi[5]) + f[7]) * double(f[5] > 0) + // NE <-> SW
+                       e[6] * (abs(phi[6]) + f[8]) * double(f[6] > 0) + // NW <-> SE
+                       e[7] * (abs(phi[7]) + f[5]) * double(f[7] > 0) + // SW <-> NE
+                       e[8] * (abs(phi[8]) + f[6]) * double(f[8] > 0))
+                       * c * delta_x; //  // SE <-> NW
 
-            dvec2 F = dvec2(0.0);
-            for (uint i = 0; i < 9; i++) {
-                F += e[i] * (f2[i] - f[i]);
-            }
+            // dvec2 F = dvec2(0.0);
+            // for (uint i = 0; i < 9; i++) {
+            //     F += e[i] * (f2[i] - f[i]);
+            // }
 
-            // double press = length(F) * 1;
-            double press = length(u);
+            double press = length(F) * 1;
+            // double press = length(u);
 
-            if (u_settings[1] && (cor(float(press) - 0.01) >
+            if (u_settings[1] && (ero(float(press) - 0.01) >
                                   rand(vec2(press*texture_loc)))) {
-                // Corrosion, remove the wall
+                // Erosion, remove the wall
                 data.a = 0;
-
-                // // Adjust for the momentum of the 'moving' wall.
-                // dvec2 mom = dvec2(double(u.x >= 0) + double(u.x < 0),
-                //                   double(u.x >= 0) + double(u.y < 0));
-
-                // f[2] = min(0, f[2] - 2 / (c*c) * w[4] * dot(e[4], mom));                //
-                // f[3] = min(0, f[3] - 2 / (c*c) * w[1] * dot(e[1], mom));                //
-                // f[4] = min(0, f[4] - 2 / (c*c) * w[2] * dot(e[2], mom));                //
-                // f[1] = min(0, f[1] - 2 / (c*c) * w[3] * dot(e[3], mom));                //
-
-                // f[6] = min(0, f[6] - 2 / (c*c) * w[8] * dot(e[8], mom));
-                // f[7] = min(0, f[7] - 2 / (c*c) * w[5] * dot(e[5], mom));
-                // f[8] = min(0, f[8] - 2 / (c*c) * w[6] * dot(e[6], mom));
-                // f[5] = min(0, f[5] - 2 / (c*c) * w[7] * dot(e[7], mom));
-
+                isWall = false;
             }
         }
+    }
+
+
+    // Calculate rho (the density) and u (the velocity vector).
+    double rho = 0.0;
+    dvec2 u = vec2(0.0);
+    for (uint i = 0; i < 9; i++) {
+        rho += abs(f[i]);// * double(f[i] > 0);
+        u += e[i] * abs(f[i]);// * double(f[i] > 0);
+    }
+    u *= c / rho;
+
+
+    #ifdef ENABLE_SLOPE
+    double u_len = length(u);
+    if (u_len > 0.0) {
+        u += u_slope;
+        u *= u_len / length(u);
+    }
+    #endif
+
+
+    // Collision step: Interpolate f with feq
+    double udotu = dot(u, u);
+    for (uint i = 0; i < 9; i++) {
+        f[i] = max(0.0, (1 - omega) * abs(f[i]) + omega * calc_feq(i, rho, u, udotu));
+    }
+
+
+    // Sedimentation.
+    #ifdef ENABLE_SEDIMENTATION
+    if (u_settings[2] && !isSource && !isWall &&
+        sed(float(length(u))) > rand(vec2(u)*texture_loc) + 0.003) {
+        data.g = 1 ; // Add wall next step.
+    }
+    #endif
+
+    // Wall bounce back.
+    if (isWall) {
+
+        // // Memory for force and bounce-back calculations.
+        // double f2[9] = {abs(f[0]), abs(f[1]), abs(f[2]),
+        //                 abs(f[3]), abs(f[4]), abs(f[5]),
+        //                 abs(f[6]), abs(f[7]), abs(f[8])};
+
+        // const double momentum_mod = 1.00;
+
+        // // Bounce back
+        // f[2] = -f2[4] * momentum_mod; // N -> S
+        // f[3] = -f2[1] * momentum_mod; // W -> E
+        // f[4] = -f2[2] * momentum_mod; // S -> N
+        // f[1] = -f2[3] * momentum_mod; // E ->f2
+        // f[6] = -f2[8] * momentum_mod; // NW -> SE
+        // f[7] = -f2[5] * momentum_mod; // SW -> NE
+        // f[8] = -f2[6] * momentum_mod; // SE -> NW
+        // f[5] = -f2[7] * momentum_mod; // NE -> SW
+
 
         // Bounce back (old version)
-        // double f2c = f[2]; // N
-        // double f3c = f[3]; // W
-        // double f6c = f[6]; // NW
-        // double f7c = f[7]; // SW
+        double f2c = f[2]; // N
+        double f3c = f[3]; // W
+        double f6c = f[6]; // NW
+        double f7c = f[7]; // SW
 
-        // const double modmod = 1.0;
+        f[2] = -abs(f[4]); // N -> S
+        f[3] = -abs(f[1]); // W -> E
+        f[4] = -abs(f2c);  // S -> N
+        f[1] = -abs(f3c);  // E -> W
+        f[6] = -abs(f[8]); // NW -> SE
+        f[7] = -abs(f[5]); // SW -> NE
+        f[8] = -abs(f6c);  // SE -> NW
+        f[5] = -abs(f7c);  // NE -> SW
 
-        // f[2] = -abs(f[4])*modmod; // N -> S
-        // f[3] = -abs(f[1])*modmod; // W -> E
-        // f[4] = -abs(f2c)*modmod;  // S -> N
-        // f[1] = -abs(f3c)*modmod;  // E -> W
-
-        // f[6] = -abs(f[8])*modmod; // NW -> SE
-        // f[7] = -abs(f[5])*modmod; // SW -> NE
-        // f[8] = -abs(f6c)*modmod;  // SE -> NW
-        // f[5] = -abs(f7c)*modmod;  // NE -> SW
-
-            // rho = press;
-            // if (u_settings[3]) {
-            //     rho = 1.0;
-            // }
+        // const double p = 0.0;
+        // const double q = 1 - p;
+        // f[2] = -(f2[2]*p + f2[4]*q); // N -> S
+        // f[3] = -(f2[1]*p + f2[3]*q); // W -> E
+        // f[4] = -(f2[4]*p + f2[2]*q); // S -> N
+        // f[1] = -(f2[1]*p + f2[3]*q); // E ->f2
+        // f[6] = -(f2[6]*p + f2[8]*q); // NW -> SE
+        // f[7] = -(f2[7]*p + f2[5]*q); // SW -> NE
+        // f[8] = -(f2[8]*p + f2[6]*q); // SE -> NW
+        // f[5] = -(f2[5]*p + f2[7]*q); // NE -> SW
     }
 
-    if (isSource) { // is Source
-        // Flow to the right.
 
-        if (u_settings[0] && data.b != 0) {
-            u = u0; //dvec2(length(u),0) + u0;
+    // Flow to the right.
+    #ifdef ENABLE_FLOW
+    if (u_settings[0] && isSource && data.b != 0) {
+        u = u0; //dvec2(length(u),0) + u0;
 
-            double udotu = dot(u, u);
+        double udotu = dot(u, u);
 
-            rho = rho0;
-            for (uint i = 0; i < 9; i++) {
-                f[i] = calc_feq(i, rho0, u, udotu);
-            }
+        rho = rho0;
+        for (uint i = 0; i < 9; i++) {
+            f[i] = calc_feq(i, rho0, u, udotu);
         }
     }
+    #endif
+
 
     // Ouput to the textures.
     o_color[0] = data;
