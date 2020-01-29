@@ -1,3 +1,13 @@
+/**
+ * The main fragment shader for rendering to the viewport.
+ *
+ * @file main.frag
+ * @author Jurriaan van den Berg
+ * @author Maxim van den Berg
+ * @author Melvin Seitner
+ * @date 15-01-2020
+ */
+
 #version 430
 
 precision highp float;

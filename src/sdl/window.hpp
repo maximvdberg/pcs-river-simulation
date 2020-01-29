@@ -1,5 +1,5 @@
 /**
- * Here functions are supplied to create and destroy a SDL windows.
+ * Functions for creating and destroying the SDL windows.
  *
  * @file window.hpp
  * @author Jurriaan van den Berg

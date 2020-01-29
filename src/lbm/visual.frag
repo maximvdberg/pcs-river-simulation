@@ -1,3 +1,13 @@
+/**
+ * The visual component for the LBM simulation.
+ *
+ * @file visual.frag
+ * @author Jurriaan van den Berg
+ * @author Maxim van den Berg
+ * @author Melvin Seitner
+ * @date 15-01-2020
+ */
+
 #version 450
 
 precision highp float;
