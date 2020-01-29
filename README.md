@@ -11,12 +11,23 @@ _Made for the Project Computation Science Course at the UvA._
 
 
 ## Installation
-This project was developed on Linux, but you should be able to build for Windows and Mac as well.
+This project was developed on Linux, but you should be able to build for Mac (and Windows) as well if you know what you're doing.
 
 ### Dependencies
-In order to build the program SDL2 and OpenGL version 4.3 or higher are required. On Ubuntu SDL2 can be installed using
+In order to build the program SDL2 and OpenGL version 4.3.0 or higher are required. On Ubuntu SDL2 can be installed using
 
-`sudo apt install libsdl2-dev libsdl2-image-dev`
+`sudo apt install libsdl2-dev`
+
+and on Arch using
+
+`pacman -S sdl`.
+
+For Mac users you can install SDL using homebrew. For Windows you can download the _source_ files from https://www.libsdl.org/download-2.0.php (good luck from there).
+
+
+The required OpenGL drivers are architecture-specific an usually come installed together with the system graphics drivers, but recent up-to-date systems should meet the requirements. On Linux, you can check your OpenGL version by running
+
+`glxinfo | grep "core profile"`.
 
 ### Building
 
@@ -70,41 +81,45 @@ The model used some parameters which can only be edited internally. The implemen
 
 When running the experiments, assume all figures utilise _flow from a source_ (toggled with `Q`), not a _slope_ (toggled with `R`), unless this is specified below.
 
-For most experiment it is _necessary_ to wait for the flow to balance out before starting the erosion/sedimentation or data extraction, which might take some time. Additionally, erosion and sedimentation were started simultaneously using `T`.
+For most experiments it is important to wait for the flow to balance out before starting the erosion/sedimentation or data extraction, which might take some time. Additionally, erosion and sedimentation should be started simultaneously using `T`.
 
 ### viscosity_high.png and viscosity_low.png
 The specific viscosities used here were v = 0.005 (low) and v = 0.020 (high). The `viscosity` parameter needs to be edited internally as explained above. It can be then be run using
 
-`./build/main.o assets/river.bmp`
+`./build/main.o assets/river.bmp`.
 
 ### sed-ero-demonstration.png
-Depending on exactly when sedementation and erosion are activated, the results may differ. The island is not always wiped away as shown in the figure.
+This uses the default values for all parameters. Depending on exactly when sedementation and erosion are activated, the results may differ. The island is not always wiped away as shown in the figure. Run it with
 
-`./build/main.o assets/bumpy.bmp`
+`./build/main.o assets/bumpy.bmp`.
 
 ### Omega.png
-This picture was made using the
+This picture was made using a viscosity of 0.05. This can be applied as described above. Then the model can be run using
+
+`./build/main.o assets/Omega.bmp`.
 
 
 ### river-developement.png
 The figure shows the progression of the river at 3 points in time. The model can be run for the map in question using
 
-`./build/main.o assets/river3.bmp`
+`./build/main.o assets/river3.bmp`.
 
 
 ### poiseuille_flow.png and bias_flow.png
-The data for these graphs was gathered with the function of the `X`-key explained above. For both of these results it was important to wait for a long time so that the flow could settle. The python code used to generate the graphs is included in this Git, specifically, `flow_poisuelle.py` and `flow_bias.py`.
+The data for these graphs was gathered with the function of the `X`-key explained above. For both of these results it was important to wait for a long time so that the flow could settle. The python code used to generate the graphs is included in this repository, namely the files `python/flow_poisuelle.py` and `python/flow_bias.py`.
 
-For poiseuille_flow.png, the wider tube in `assets/poiseuille.bmp` was used. Stream was not activated, instead the slope, activated with `R`, was used. Since the flow this generates is very weak, it may not be visible on screen. Here it also important to set the x flow variable `u0_x` in `src/lbm/lbm.cpp` to 0.1, which speeds up the initalisation.
+For `poiseuille_flow.png`, the wider tube in `assets/poiseuille.bmp` was used. Stream was not activated, instead the slope, activated with `R`, was used. Since the flow this generates is very weak, it may not be visible on screen. Here it also important to set the x flow variable `u0_x` in `src/lbm/lbm.cpp` to 0.1, which speeds up the initalisation. Run the simulation with
 
 `./build/main.o assets/poiseuille.bmp`
 
-For bias_flow.png, the map `Omega.bmp` was used. The results  were measured at the peak of the bend. We repeated the experiment multiple times, using different viscosities, as shown in the graph. The viscosity will need to be edited as described above. It can be run using
+For `bias_flow.png`, the map `Omega.bmp` was used. The results  were measured at the peak of the bend. We repeated the experiment multiple times, using different viscosities, as shown in the graph. The viscosity will need to be edited as described above. It can be run using
 
-`./build/main.o assets/Omega.bmp`
+`./build/main.o assets/Omega.bmp`.
 
 
 ### Just for fun
 Try enabling the corrosion and sedimentation _before_ the flow has stabilised. Because of the no-slip condition, there will actually be _more_ flow against the walls like this, which leads to some interesting patterns.
 
 We mentioned the instability of the model when the viscocity becomes to small or the in-flow too high. This can actually create some fancy patterns, so feel free to try out viscosities around 0.00005.
+
+If you want, you can try the other `.bmp`-files and experiment with some different variables.
