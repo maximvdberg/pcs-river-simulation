@@ -1,3 +1,13 @@
+/**
+ * The implementation of the modified LBM model.
+ *
+ * @file lbm.frag
+ * @author Jurriaan van den Berg
+ * @author Maxim van den Berg
+ * @author Melvin Seitner
+ * @date 15-01-2020
+ */
+
 #version 430
 
 precision highp float;

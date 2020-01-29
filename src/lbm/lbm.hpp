@@ -73,11 +73,14 @@ namespace pcs {
          * according to the specified bitmap. Afterwards, it compiles the OpenGL
          * shaders `lbm.frag` (for all computations) and `visual.frag` (for
          * rendering) and performs the rendering setup.
+         *
+         * @param renderer The OpenGL instance
+         * @param riverFile The path to the river .bmp file
          */
         LatticeBoltzmann( GLRenderer& renderer, const std::string& riverFile );
 
         /**
-         * Deconstruct the `Buffer` structs and OpenGL programs>
+         * Deconstruct the `Buffer` structs and OpenGL programs.
          */
         void close();
 
@@ -88,6 +91,14 @@ namespace pcs {
          * settings.
          *
          * Calls the `handleInput` and `readPixels` functions.
+         *
+         * @see LatticeBoltzmann:handleInput()
+         * @see LatticeBoltzmann:readPixels()
+         *
+         * @param renderer The OpenGL instance
+         * @param input SDL input event data
+         * @param width Width of the river bitmap
+         * @param height Height of the river bitmap
          */
         void update( GLRenderer& renderer, InputData& input,
                      int width, int height );
@@ -98,6 +109,11 @@ namespace pcs {
          * Redirect user input to the model. For a list of the inputs handled
          * within this function, see the first keymap list within the
          * `README.md` file.
+         *
+         * @see LatticeBoltzmann:update()
+         *
+         * @param renderer The OpenGL instance
+         * @param input SDL input event data
          */
         void handleInput( GLRenderer& renderer, InputData& input );
 
@@ -106,6 +122,11 @@ namespace pcs {
          * pointer which the user can use to extract numerical data from the
          * simulation. For more information, see the last keymap list within
          * the `README.md` file.
+         *
+         * @see LatticeBoltzmann:update()
+         *
+         * @param renderer The OpenGL instance
+         * @param input SDL input event data
          */
         void readPixels( GLRenderer& renderer, InputData& input );
 

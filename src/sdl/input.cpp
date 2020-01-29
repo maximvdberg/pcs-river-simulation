@@ -1,5 +1,5 @@
 /**
- * Here functions are implemented to handle SDL input.
+ * Implementation of some function for handling SDL input.
  *
  * @file input.cpp
  * @author Jurriaan van den Berg

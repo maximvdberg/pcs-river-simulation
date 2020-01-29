@@ -1,5 +1,7 @@
 /**
- * The Project Computational Science River Flow main file.
+ * The main file for the river meandering simulation model using LBM.
+ *
+ * For the Project Computational Science Course at the UvA
  *
  * @file main.cpp
  * @author Jurriaan van den Berg

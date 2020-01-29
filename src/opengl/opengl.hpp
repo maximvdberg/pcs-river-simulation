@@ -75,7 +75,7 @@ namespace pcs {
          * called after the window size has been changed.
          *
          * @param width The width of the viewport / screen.
-         * @param width The height of the viewport / screen.
+         * @param height The height of the viewport / screen.
          */
         void updateViewport( int width, int height );
 

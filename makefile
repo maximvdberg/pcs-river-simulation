@@ -1,3 +1,11 @@
+# General purpose makefile using clang
+#
+# @file makefile
+# @author Jurriaan van den Berg
+# @author Maxim van den Berg
+# @author Melvin Seitner
+# @date 08-01-2020
+#
 
 MK_DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 
