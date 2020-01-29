@@ -252,11 +252,11 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
 
         const int size = 8;
         renderer.setRenderColor(1.0, 0.0, 0.0);
-        renderer.renderRectangle(screenX + cursorX * screenScale,
-                                 screenY + cursorY * screenScale-size/2,
+        renderer.renderRectangle((screenX + cursorX) * screenScale,
+                                 (screenY + cursorY) * screenScale-size/2,
                                  1.f, size);
-        renderer.renderRectangle(screenX + cursorX * screenScale - size/2,
-                                 screenY + cursorY * screenScale,
+        renderer.renderRectangle((screenX + cursorX) * screenScale - size/2,
+                                 (screenY + cursorY) * screenScale,
                                  size, 1.f);
     }
 
@@ -286,8 +286,8 @@ void LatticeBoltzmann::readPixels( GLRenderer& renderer, InputData& input ) {
 
     // Place pointer.
     if (input.keyMap[SDL_BUTTON_LEFT] == 1) {
-        cursorX = (input.cursorX - screenX) / screenScale;
-        cursorY = (input.cursorY - screenY)  / screenScale;
+        cursorX = input.cursorX / screenScale - screenX;
+        cursorY = input.cursorY / screenScale - screenY;
         posChanged = true;
     }
 
