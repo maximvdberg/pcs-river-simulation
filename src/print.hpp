@@ -23,7 +23,7 @@ template <typename T, typename = void>
 struct isIterable : std::false_type {};
 template <typename T>
 struct isIterable<T, void_t<decltype ((*(T*)(0)).begin()),
-                      decltype ((*(T*)(0)).end())>> : std::true_type {};
+                            decltype ((*(T*)(0)).end())>> : std::true_type {};
 
 template <typename T, typename = void>
 struct isStringable : std::false_type {};
@@ -31,11 +31,11 @@ template <typename T>
 struct isStringable<T, void_t<decltype(operator<<((*(std::ostream*)(0)),
                                                   (*(T*)(0))))>> : std::true_type {};
 
-template <typename T>
-constexpr bool printIterable = !isStringable<T>::value && isIterable<T>::value;
 
 // Generic toString function.
-template <typename T, typename std::enable_if_t<!printIterable<T>, int> = 0>
+template <typename T,
+          typename std::enable_if<!(!isStringable<T>::value &&
+                                    isIterable<T>::value), int>::type = 0>
 std::string toString( const T& value ) {
     std::stringstream ss;
     ss << std::boolalpha << value;
@@ -55,7 +55,9 @@ std::string toString( const std::pair<T, U>& pair ) {
 }
 
 // Specialization of toString  for iterables.
-template <typename T, typename std::enable_if_t<printIterable<T>, int> = 0>
+template <typename T,
+          typename std::enable_if<(!isStringable<T>::value &&
+                                   isIterable<T>::value), int>::type = 0>
 std::string toString( const T& it ) {
     std::stringstream ss;
     ss << '{';
@@ -75,8 +77,8 @@ std::string toString( const T& it ) {
 
 /**
  * Print anything you want. Every argument, or 'word', will be converted to
- * a string (using `toString()`) and printed. Words
- * @tparam Args Wow an argument pack.
+ * a string (using `toString()`) and printed.
+ * @tparam Args An argument pack of 'words', which can be any type.
  * @see toString()
  */
 template<typename... Args>

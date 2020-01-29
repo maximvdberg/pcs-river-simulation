@@ -15,6 +15,7 @@
 
 using namespace pcs;
 
+
 // Flow constants.
 static const double e_x[9] = {0., 1.,  0., -1., 0.,  1., -1., -1., 1.};
 static const double e_y[9] = {0., 0., 1., 0., -1., 1., 1.,  -1., -1.};
@@ -22,18 +23,20 @@ static const double w[9] = {4./9., 1./9., 1./9., 1./9., 1./9.,
                             1./36., 1./36., 1./36., 1./36.};
 
 // System parameters.
-static const double delta_x = 1.0;                  // Lattice spacing
-static const double delta_t = 1.0;                  // Time step
+static const double delta_x = 1.0;  // Lattice spacing
+static const double delta_t = 1.0;  // Time step
 static const double c = delta_x / delta_t;
 
 // Starting values and functions.
-static const double rho = 1.0;
-static double calc_feq( int i, double u_x, double u_y ) {
+static const double rho0 = 1.0;  // The initial rho (density).
+static const double u0_x = 0.0;  // The initial x velocity.
+static const double u0_y = 0.0;  // The initial y velocity.
 
-    double udotu = u_x * u_x + u_y * u_y;
-    double edotu_c = 3.0*(e_x[i]*u_x + e_y[i]*u_y) / c;
-    return w[i] * rho * (1 + edotu_c + edotu_c*edotu_c / 2.0 -
-                         1.5 * udotu / (c * c));
+static double calc_feq( int i ) {
+    const double udotu = u0_x * u0_x + u0_y * u0_y;
+    double edotu_c = 3.0 * (e_x[i] * u0_x + e_y[i] * u0_y) / c;
+    return w[i] * rho0 * (1 + edotu_c + edotu_c*edotu_c / 2.0 -
+                          1.5 * udotu / (c * c));
 }
 
 
@@ -42,6 +45,7 @@ LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer, const std::string& riv
     // Load the background texture file, which is the river configuration.
     backgroundTexture = gl::loadTexture(riverFile, &width, &height);
 
+    // Set frame variables
     framestep = 10;      // Amount of simulation frames between rendering
     frame = 0;           // Frame counter
     paused = false;
@@ -51,9 +55,11 @@ LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer, const std::string& riv
     settings[2] = false; // enable sedimentation
     settings[3] = false; // enable slope
 
+    // Initialise the camera position.
     screenX = screenY = 0.f;
     screenScale = 1.f;
     cursorX = cursorY = -1;
+
 
     // Create the buffers, storing the flow parameters f_i.
     for (Buffers& buff : buffers) {
@@ -111,8 +117,7 @@ LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer, const std::string& riv
     // Initialise the textures and the  f_i values.
     double f_eq[10] = { 0.0 }; // <-- filler
     for (int i = 0; i < 9; i++) {
-        f_eq[i+1] = calc_feq(i, 0.0, 0.0);
-        print(f_eq[i+1]);
+        f_eq[i+1] = calc_feq(i);
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, buffers[0].fbo);
@@ -151,8 +156,9 @@ void LatticeBoltzmann::handleInput( GLRenderer& renderer, InputData& input ) {
 
     // Set the screen scale.
     for (int i = 0; i < 9; ++i) {
-        if (input.keyMap[SDL_SCANCODE_1 + i])
+        if (input.keyMap[SDL_SCANCODE_1 + i]) {
             screenScale = (float) i + 1.f;
+        }
     }
 
     // Reset the screen position and scale.
@@ -234,7 +240,7 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
 
     renderer.setRenderColor(1.f, 1.f, 1.f, 1.f);
     glBindTextures(0, 3, buffers[frame % 2].texture);
-    renderer.setModelMatrix(screenX, screenY,
+    renderer.setModelMatrix(screenX * screenScale, screenY * screenScale,
                             width * screenScale, height * screenScale);
 
     renderer.renderModel(renderer.getSquareModel());
@@ -323,7 +329,7 @@ void LatticeBoltzmann::readPixels( GLRenderer& renderer, InputData& input ) {
         std::cout << "u   = (" << std::setw(dw) << toString(vals[0])
                   << ", " << std::setw(dw) << toString(vals[1])
                   << ")" << std::endl;
-        std::cout << "|u| = "
+        std::cout << "|u| =  " << std::setw(dw)
                   << toString(std::sqrt(vals[0]*vals[0] +
                                         vals[1]*vals[1])) << std::endl;
         std::cout << "rho =  " << std::setw(dw) << toString(vals[2])

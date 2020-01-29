@@ -10,8 +10,6 @@
 
 #include "window.hpp"
 
-#include <SDL2/SDL_image.h>
-
 #include "../print.hpp"
 
 using namespace pcs;
@@ -28,14 +26,6 @@ Window pcs::createOpenGLWindow( const std::string& title, int width, int height 
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         print(INFO_, "SDL failed to initialise! SDL Error:",
               SDL_GetError());
-        return {nullptr, nullptr};
-    }
-
-    // Initialize SDL image.
-    int imgFlags = IMG_INIT_PNG;
-    if (!(IMG_Init(imgFlags) & imgFlags)) {
-        print(INFO_, "SDL_image could not initialise! "
-              "SDL_image Error:", IMG_GetError());
         return {nullptr, nullptr};
     }
 
@@ -64,7 +54,7 @@ Window pcs::createOpenGLWindow( const std::string& title, int width, int height 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
                         SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 
     window.glContext = SDL_GL_CreateContext(window.sdlData);
 

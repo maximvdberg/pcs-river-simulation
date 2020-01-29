@@ -16,10 +16,6 @@
 #include <sstream>
 #include <fstream>
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
-
-
 using namespace pcs;
 
 
@@ -122,9 +118,11 @@ void GLRenderer::clear( float r, float g, float b, float a ) {
     glClear(GL_COLOR_BUFFER_BIT);
 }
 
+
 void GLRenderer::setRenderColor( float r, float g, float b, float a ) {
     glUniform4f(u_color, r, g, b, a);
 }
+
 
 void GLRenderer::setModelMatrix( const float matrix[16] ) {
     glUniformMatrix4fv(u_model_matrix, 1, true, matrix);
@@ -166,11 +164,11 @@ void GLRenderer::renderModel( const Model& model ) {
 }
 
 
-void GLRenderer::renderToTexture( GLuint textureTarget, int attachment ) {
+void GLRenderer::renderToTexture( GLuint textureTarget ) {
+
     // Bind the multipurpose framebuffer and attach the texture.
-    if (attachment == 0)
-        glBindFramebuffer(GL_FRAMEBUFFER, multipurposeFBO);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment,
+    glBindFramebuffer(GL_FRAMEBUFFER, multipurposeFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                            GL_TEXTURE_2D, textureTarget, 0);
 }
 
@@ -322,42 +320,63 @@ GLuint gl::loadTexture( const std::string& filePath,
                         int* widthPtr, int* heightPtr ) {
 
 
-    // Load the image using SDL_Image.
-    SDL_Surface* load = IMG_Load(filePath.c_str());
-    if (load == nullptr) {
-        print(INFO_, "Failed to load the texture at", "["+filePath+"]", "! Does it exists?");
+
+    // Load the file.
+    std::ifstream file(filePath, std::ios::binary);
+
+    if (!file) {
+        print(INFO_, "Failed to load the texture at", "["+filePath+"]",
+              "! Does it exists?");
         return 0;
     }
 
-    // Convert the image to a format we can easily use.
-    SDL_Surface* source = SDL_ConvertSurfaceFormat(load,
-                                                SDL_PIXELFORMAT_ABGR8888, 0);
-    SDL_FreeSurface(load);
+    // Read the header of the bitmap.
+    constexpr size_t bmp_header_size = 54;
+    char header[bmp_header_size];
+    file.read(header, bmp_header_size);
 
-    const int width = source->w;
-    const int height = source->h;
-    const int cpp = 4; // Color per pixel.
+    const int offset = *(int*) &header[10];
+    const int hsize  = *(int*) &header[14];  // Header size.
+    const int width  = *(int*) &header[18];
+    const int height = *(int*) &header[22];
+    const int bbp    = *(int*) &header[28];  // Bits per pixel.
+    const int comprm = *(int*) &header[30];  // Compression method.
 
-    // Create a place to store our pixels.
-    float* const pixels = new float[height * width * cpp];
-    float* activePixel = pixels;
+    // Give up if the following conditions aren't met.
+    if (header[0] != 'B' || header[1] != 'M' ||              // Bitmap type.
+        hsize == 12 || hsize == 16 || hsize == 64 ||        // Header sizes.
+        comprm != 0 ||                     // Compression Method (= BI_RGB).
+        bbp != 24 ||                 // We only support 24 bit bitmaps here.
+        height < 0) {                             // No upside down bitmaps.
 
-    // Invert the source pixels and convert them to floats.
-    SDL_LockSurface(source);
-    uint8_t* const sourcePixel = (uint8_t*) source->pixels;
-
-    for (int y = height - 1; y >= 0; y--) {
-        for (int x = 0; x < width; x++) {
-            for (int p = 0; p < cpp; p++) {
-                uint8_t& v = sourcePixel[x * cpp + y * source->pitch + p];
-                *(activePixel++) = (float) v / 255.f;
-            }
-        }
+        print(INFO_, "Bitmap type from", "["+filePath+"]", "is not supported!");
+        return 0;
     }
 
-    // Delete the surface, as we have read all its pixels.
-    SDL_UnlockSurface(source);
-    SDL_FreeSurface(source);
+    // Find the row and image size of the bitmap.
+    const int rowSize = ((bbp * width + 31) / 32) * 4; // In bytes
+    const int imageSize = rowSize * height;
+
+    // Move to the right offset and read the pixel data.
+    file.seekg(offset);
+    uint8_t* const source = new uint8_t[imageSize];
+    file.read((char*) source, imageSize);
+    file.close();
+
+    // Convert the bitmap data to pixel data.
+    float* const pixels = new float[width * height * 4];
+    float* ptr = pixels;
+
+    for (int y = 0; y < std::abs(height); ++y) {
+        for (int x = 0; x < width; ++x) {
+            int i = 3 * x + y * rowSize;
+            *(ptr++) = (float) source[i+2] / 255.f;
+            *(ptr++) = (float) source[i+1] / 255.f;
+            *(ptr++) = (float) source[i] / 255.f;
+            *(ptr++) = 1.f;
+        }
+    }
+    delete[] source;
 
     // Create the texture using the acquired pixel data.
     GLuint texture = gl::genTexture(width, height, pixels);

@@ -1,13 +1,13 @@
 #version 430
 
 precision highp float;
+precision highp usampler2D;
 
 in vec2 v_tex_coords;
 
 layout(location = 0) out uvec4 o_color[7];
 
 layout(location = 3) uniform usampler2D u_textures[7];
-
 layout(location = 10) uniform bvec4 u_settings;
 
 
@@ -18,12 +18,12 @@ layout(location = 10) uniform bvec4 u_settings;
 
 
 // Some constants.
-const double viscosity = 0.005;             // Viscosity
-const double delta_x = 1.0;                  // Lattice spacing
-const double delta_t = 1.0;               // Time step
-double c = delta_x / delta_t;                // Lattice speed
-double omega =  2 / (6 * viscosity * delta_t
-                     / (delta_x * delta_x) + 1);  // Parameter for "relaxation"
+const double viscosity = 0.005;                  // Viscosity
+const double delta_x = 1.0;                      // Lattice spacing
+const double delta_t = 1.0;                      // Time step
+double c = delta_x / delta_t;                    // Lattice speed
+double omega =  2 / (6 * viscosity * delta_t /
+                     (delta_x * delta_x) + 1); // Parameter for "relaxation"
 const dvec2 u0 = dvec2(0.1, 0.0);                // Initial in-flow speed
 const double rho0 = 1.0;
 
@@ -34,19 +34,19 @@ const dvec2 u_slope = dvec2(0.1, 0.0);
 
 
 // f_i directions.
-const dvec2 e[9] = {dvec2(0., 0.),  dvec2(1., 0.),   dvec2(0., 1.),
-                    dvec2(-1., 0.), dvec2(0., -1.),  dvec2(1., 1.),
-                    dvec2(-1., 1.), dvec2(-1., -1.), dvec2(1., -1.)};
+const dvec2 e[9] = dvec2[9](dvec2(0., 0.),  dvec2(1., 0.),   dvec2(0., 1.),
+                            dvec2(-1., 0.), dvec2(0., -1.),  dvec2(1., 1.),
+                            dvec2(-1., 1.), dvec2(-1., -1.), dvec2(1., -1.));
 
 // Float f_i directions to avoid having to convert from doubles to floats.
-const vec2 ef[9] = {vec2(0., 0.),  vec2(1., 0.),   vec2(0., 1.),
-                    vec2(-1., 0.), vec2(0., -1.),  vec2(1., 1.),
-                    vec2(-1., 1.), vec2(-1., -1.), vec2(1., -1.)};
+const vec2 ef[9] = vec2[9](vec2(0., 0.),  vec2(1., 0.),   vec2(0., 1.),
+                           vec2(-1., 0.), vec2(0., -1.),  vec2(1., 1.),
+                           vec2(-1., 1.), vec2(-1., -1.), vec2(1., -1.));
 
 // Flow weights for each f_i.
-const double w[9] = {4. /  9., 1. /  9., 1. /  9.,
-                     1. /  9., 1. /  9., 1. / 36.,
-                     1. / 36., 1. / 36., 1. / 36.};
+const double w[9] = double[9](4. /  9., 1. /  9., 1. /  9.,
+                              1. /  9., 1. /  9., 1. / 36.,
+                              1. / 36., 1. / 36., 1. / 36.);
 
 
 // The activation probability function.
@@ -112,9 +112,9 @@ double calc_feq( in uint i , in double rho, in dvec2 u, in double udotu ) {
 
 void main() {
 
-    const ivec2 texture_size = textureSize(u_textures[0], 0);
-    const ivec2 texture_loc = ivec2(v_tex_coords * vec2(texture_size - ivec2(1)) + vec2(0.5));
-    const vec2 pixel_size = 1.0 / texture_size;
+    ivec2 texture_size = textureSize(u_textures[0], 0);
+    ivec2 texture_loc = ivec2(v_tex_coords * vec2(texture_size - ivec2(1)) + vec2(0.5));
+    vec2 pixel_size = 1.0 / texture_size;
 
     // Copy the data like walls and such.
     uvec4 gridData = texture(u_textures[0], v_tex_coords);
@@ -124,7 +124,7 @@ void main() {
     bool isWall = gridData.a != 0;
 
     // Get the f values and stream at the same time.
-    double f[9] = {
+    double f[9] = double[9](
         get2f(u_textures[2], v_tex_coords),                    // f0
         get1f(u_textures[3], v_tex_coords - pixel_size*ef[1]), // f1
         get2f(u_textures[3], v_tex_coords - pixel_size*ef[2]), // f2
@@ -134,7 +134,7 @@ void main() {
         get2f(u_textures[5], v_tex_coords - pixel_size*ef[6]), // f6
         get1f(u_textures[6], v_tex_coords - pixel_size*ef[7]), // f7
         get2f(u_textures[6], v_tex_coords - pixel_size*ef[8])  // f8
-    };
+    );
 
 
     // Make the wall.
@@ -153,7 +153,7 @@ void main() {
     if (u_settings[1] && isWall && !isSource) {
 
         // Memory for force and bounce-back calculations.
-        double phi[9] = {
+        double phi[9] = double[9](
             get2f(u_textures[2], v_tex_coords), // f0
             get1f(u_textures[3], v_tex_coords), // f1
             get2f(u_textures[3], v_tex_coords), // f2
@@ -163,7 +163,7 @@ void main() {
             get2f(u_textures[5], v_tex_coords), // f6
             get1f(u_textures[6], v_tex_coords), // f7
             get2f(u_textures[6], v_tex_coords)  // f8
-        };
+        );
 
         if (!isIndestructible) {
 
@@ -206,6 +206,7 @@ void main() {
         u += e[i] * abs(f[i]);// * double(f[i] > 0);
     }
 
+    // Add the slope 'force' to simulate a pressure gradient.
     #ifdef ENABLE_SLOPE
     if (u_settings[3] && !isWall && !isSource) {
         double u_len = length(u);
@@ -240,9 +241,9 @@ void main() {
     if (isWall) {
 
         // Memory for force and bounce-back calculations.
-        double f2[9] = {abs(f[0]), abs(f[1]), abs(f[2]),
-                        abs(f[3]), abs(f[4]), abs(f[5]),
-                        abs(f[6]), abs(f[7]), abs(f[8])};
+        double f2[9] = double[9](abs(f[0]), abs(f[1]), abs(f[2]),
+                                 abs(f[3]), abs(f[4]), abs(f[5]),
+                                 abs(f[6]), abs(f[7]), abs(f[8]));
 
         const double momentum_mod = 1.00;
 

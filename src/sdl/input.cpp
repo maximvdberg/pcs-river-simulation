@@ -13,7 +13,7 @@
 
 void pcs::updateInput( Window& window, InputData& data ) {
 
-    // Update the keypresses.
+    // Update the keypresses from just pressed to being held down.
     for (const std::pair<int, char>& v : data.keyMap) {
         data.keyMap[v.first] = v.second == 0 ? 0 : 1;
     }
@@ -29,7 +29,7 @@ void pcs::updateInput( Window& window, InputData& data ) {
 
         case SDL_WINDOWEVENT:
             if (e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
-                data.windowSizeChanged = true;
+                window.sizeChanged = true;
                 SDL_GL_GetDrawableSize(window.sdlData,
                                        &window.width,
                                        &window.height);

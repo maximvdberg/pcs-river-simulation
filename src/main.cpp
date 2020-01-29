@@ -27,21 +27,21 @@ int main( int argc, char** argv ) {
 
     print("~start~");
 
-    // Get the river file we want to simulate.
+    // Get the river file we want to simulate as command line argument.
     std::string riverFile = "assets/river.bmp";
     if (argc > 1)
         riverFile = argv[1];
 
-    // Create a window.
-    Window window = createOpenGLWindow("Cool :O");
 
-    // Create the renderer object.
+    // Create a window and the renderer object.
+    Window window = createOpenGLWindow("Bumpy 3: LBM River Flowinator");
     GLRenderer renderer = GLRenderer();
 
-    // Store the input data here, and initialise it.
+    // Store the input data here.
     InputData input;
 
-    LatticeBoltzmann boltzmann = LatticeBoltzmann(renderer, riverFile);
+    // Create the LBM executor.
+    LatticeBoltzmann lbm = LatticeBoltzmann(renderer, riverFile);
 
 
     // We now update untill the window gets closed.
@@ -51,21 +51,23 @@ int main( int argc, char** argv ) {
         updateInput(window, input);
 
         // Update the viewport if the window size has changed.
-        if (input.windowSizeChanged) {
-            input.windowSizeChanged = false;
+        if (window.sizeChanged) {
+            window.sizeChanged = false;
             renderer.updateViewport(window.width, window.height);
         }
 
         // Clear the screen so we can draw the new frame.
         renderer.clear(0.f, 0.f, 0.5f, 1.f);
 
-        boltzmann.update(renderer, input, window.width, window.height);
+        // Update the LBM model (which also renders it).
+        lbm.update(renderer, input, window.width, window.height);
 
         // Swap the buffer we have rendered to with the display buffer.
         SDL_GL_SwapWindow(window.sdlData);
     }
 
-    boltzmann.close();
+    // Shutdown, close everything neatly.
+    lbm.close();
     renderer.close();
     destroyWindow(window);
     print("~end~");

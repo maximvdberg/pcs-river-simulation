@@ -109,10 +109,17 @@ namespace pcs {
          */
         void setModelMatrix( const float matrix[16]);
 
-        /**
-         * TODO
-         */
-        void setModelMatrix( float posX, float posY, float width, float height);
+         /**
+          * Update the model matrix in the current program, by settings a
+          * x and y position and a width and a height.
+          *
+          * @param matrix The model matrix.
+          * @param posX The x position of the model.
+          * @param posY The y position of the model.
+          * @param width The width of the model.
+          * @param height The height of the model.
+          */
+        void setModelMatrix( float posX, float posY, float width, float height );
 
         /**
          * Render a texture to the current target. This function render the
@@ -158,10 +165,8 @@ namespace pcs {
          * Render to a texture instead of the window.
          *
          * @param textureTarget The texture to target, e.g. to render to.
-         * @param attachment Which color attachment to use when rendering.
-         *                   Defaults to color attachment 0.
          */
-        void renderToTexture( GLuint textureTarget, int attachment = 0 );
+        void renderToTexture( GLuint textureTarget );
 
         /**
          * Reset the rendering target back to the screen.
@@ -170,7 +175,7 @@ namespace pcs {
 
 
         /**
-         * Use the OpenGL program specified by 'program'.
+         * Make OpenGL use a specified program for the rendering.
          *
          * @param program The program to use.
          */
@@ -215,7 +220,6 @@ namespace pcs {
         GLint i_tex_coords;
         GLint u_projection_matrix;
         GLint u_model_matrix;
-
         GLint u_color;
         GLint u_texture;
 
@@ -257,16 +261,20 @@ namespace pcs {
         /**
          * Generate an OpenGL texture of width 'width' and height 'height'.
          * Pixel data can be supplied by setting 'data', and must be formated
-         * as an float per color in RGBA format, so 4 floats per pixel.
+         * as an float per color in RGBA format, so 4 floats per pixel. It is
+         * also possible to create an unsigned integer image using genUTexture,
+         * where color data is supplied with unsigned integer (32bits) instead.
          *
          * @param width The width of the texture.
          * @param height The height of the texture.
-         * @param data A pointer to the first color of the
-         *             pixel data, formatted RGBA.
+         * @param data A pointer to the first color of the first pixel of the
+         *             pixel data, formatted as RGBA.
          * @return The texture id, or 0 if the generation has failed.
          */
-        GLuint genTexture( int width, int height, const float* data = nullptr );
-        GLuint genUTexture( int width, int height, const uint32_t* data = nullptr );
+        GLuint genTexture( int width, int height,
+                           const float* data = nullptr );
+        GLuint genUTexture( int width, int height,
+                            const uint32_t* data = nullptr );
 
         /**
          * Load a texture from a file. Supported file formats are .bmp and .png.
@@ -293,9 +301,9 @@ namespace pcs {
     }
 
 
-
     /**
-     * Read a binary file as an ascii string.
+     * Read a binary file as an ascii string. (Included here because
+     * it is only used to read shader files in this project.)
      *
      * @param path The path to the file.
      * @return The file contents.
