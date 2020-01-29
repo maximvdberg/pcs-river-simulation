@@ -5,7 +5,7 @@
  *
  * @file print.hpp
  * @author Jurriaan van den Berg
- * @copyright? Jurriaan van den Berg 2020 ?
+ * @copyright Jurriaan van den Berg 2020
  */
 
 #pragma once
