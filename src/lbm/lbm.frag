@@ -10,30 +10,6 @@ layout(location = 3) uniform usampler2D u_textures[7];
 
 layout(location = 10) uniform bvec4 u_settings;
 
-/*
- * How the textures are mapped:
- * +----------+---------------+---------------+
- * | Texture  | Mapped to     | input/output  |
- * +----------+---------------+---------------+
- * | 0.r        Walls temp      In            |
- * | 0.g        Indestructible  In/out        |
- * | 0.b        Flow source     In/out        |
- * | 0.a        Walls           In/out        |
- * | 1.rg       u flow x        Out           |
- * | 1.ba       u flow y        Out           |
- * | 2.rg       rho             Out           |
- * | 2.ba       f0 (0)          In/out        |
- * | 3.rg       f1 (E)          In/out        |
- * | 3.ba       f2 (N)          In/out        |
- * | 4.rg       f3 (W)          In/out        |
- * | 4.ba       f4 (S)          In/out        |
- * | 5.rg       f5 (NE)         In/out        |
- * | 5.ba       f6 (NW)         In/out        |
- * | 6.rg       f7 (SW)         In/out        |
- * | 6.ba       f8 (SE)         In/out        |
- * +------------------------------------------+
- *
- */
 
 
  #define ENABLE_SEDIMENTATION
