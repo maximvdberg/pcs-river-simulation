@@ -14,7 +14,7 @@ _Made for the Project Computation Science Course at the UvA._
 This project was developed on Linux, but you should be able to build for Mac (and Windows) as well if you know what you're doing.
 
 ### Dependencies
-In order to build the program SDL2 and OpenGL version 4.3.0 or higher are required. On Ubuntu SDL2 can be installed using
+In order to build the programs SDL2 and OpenGL (version 4.3.0 or higher) are required. On Ubuntu SDL2 can be installed using the command
 
 `sudo apt install libsdl2-dev`
 
