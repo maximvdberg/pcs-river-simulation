@@ -72,121 +72,26 @@ std::string toString( const T& it ) {
  * and line number, will be remembered. */
 #define INFO_ std::string(__func__) + "() at " + __FILE__ + ":" + toString(__LINE__) + ":"
 
-/** Special character to identify a print argument must not be printed. */
-constexpr char log_action_char = '\v';
 
 /**
  * Print anything you want. Every argument, or 'word', will be converted to
  * a string (using `toString()`) and printed. Words
  * @tparam Args Wow an argument pack.
- * @see lsepr()
- * @see lend()
- * @see lflush()
  * @see toString()
  */
 template<typename... Args>
 void print( const Args&... to_print ) {
-    const std::string args[] = {toString(to_print)...};
-    std::string words[sizeof... (Args)];
+    const std::string words[] = {toString(to_print)...};
 
     std::string sepr = " ", end = "\n";
-    bool flush = false;
-
-    // Read the provided arguments.
-    size_t i = 0;
-    for (const std::string& word : args) {
-        if (word[0] == log_action_char) {
-            switch(word[1]) {
-            case 's': sepr = word.substr(2); break;
-            case 'e': end = word.substr(2); break;
-            case 'f': flush = true; break;
-            case 'w': std::cout << std::setw(std::stoi(word.substr(2))); break;
-            case 'l': std::cout << std::left; break;
-            case 'r': std::cout << std::right; break;
-            default: break;
-            }
-        }
-        else words[i++] = word;
-    }
 
     // Print the words.
-    for (size_t j = 0; j < i; ++j) {
-        if (j != 0 && !sepr.empty()) std::cout << sepr;
-        std::cout << words[j];
+    for (size_t i = 0; i < sizeof...(to_print); ++i) {
+        if (i != 0 && !sepr.empty()) std::cout << sepr;
+        std::cout << words[i];
     }
 
-    // End, and flush if requested.
+    // End the line.
     std::cout << end;
-    if (flush) std::cout << std::flush;
 }
 
-
-/**
- * Set the printing word seperator. The provided string will be placed
- * inbetween words when printed using an overture logging/print function.
- * If not specified spaces will be used.
- *
- * Usage: `print_func("print", "me", lsepr("-"))` prints "print-me".
- *
- * @param seperator The word seperator.
- * @see print()
- * @return An action string to be passed to a printing function.
- */
-inline std::string lsepr( std::string seperator ) {
-    return std::string({log_action_char, 's'}) + seperator;
-}
-
-/**
- * Set the printing line ender. This is the string that will be printed at
- * the end of print/logging function call. If not specified a newline (\\n)
- * will be used.
- * Usage: `print_func("print", "me", lend("~"))` --> "print me~"
- *
- * @param end The print ending string.
- * @see print()
- * @return An action string to be passed to a printing function.
- */
-inline std::string lend( std::string end ) {
-    return std::string({log_action_char, 'e'}) + end;
-}
-
-/**
- * Enable flushing after printing. Make sure that the buffer gets
- * flushed. By default the buffer does not get flushed.
- * Usage: `print_func("cool", lflush())`
- *
- * @see print()
- * @return An action string to be passed to a printing function.
- */
-inline std::string lflush() {
-    return std::string({log_action_char, 'f'});
-}
-
-
-/**
- * TODO
- * @see print()
- * @return An action string to be passed to a printing function.
- */
-inline std::string lwidth( int width ) {
-    return std::string({log_action_char, 'w'}) + toString(width);
-}
-
-
-/**
- * TODO
- * @see print()
- * @return An action string to be passed to a printing function.
- */
-inline std::string lalignl() {
-    return std::string({log_action_char, 'l'});
-}
-
-/**
- * TODO
- * @see print()
- * @return An action string to be passed to a printing function.
- */
-inline std::string lalignr() {
-    return std::string({log_action_char, 'r'});
-}

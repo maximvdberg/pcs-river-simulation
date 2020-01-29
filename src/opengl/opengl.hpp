@@ -257,7 +257,7 @@ namespace pcs {
         /**
          * Generate an OpenGL texture of width 'width' and height 'height'.
          * Pixel data can be supplied by setting 'data', and must be formated
-         * as an float per color in RGBA format, so 4 float per pixel.
+         * as an float per color in RGBA format, so 4 floats per pixel.
          *
          * @param width The width of the texture.
          * @param height The height of the texture.
@@ -266,10 +266,15 @@ namespace pcs {
          * @return The texture id, or 0 if the generation has failed.
          */
         GLuint genTexture( int width, int height, const float* data = nullptr );
-        GLuint genUTexture( int width, int height, const uint8_t* data = nullptr );
+        GLuint genUTexture( int width, int height, const uint32_t* data = nullptr );
 
         /**
-         * TODO
+         * Load a texture from a file. Supported file formats are .bmp and .png.
+         *
+         * @param filePath The path to the texture file.
+         * @param width Returns the width of the texture.
+         * @param height Returns the height of the texture.
+         * @return The texture Id, or 0 if the loading has failed.
          */
         GLuint loadTexture( const std::string& filePath,
                             int* width, int* height );
@@ -286,4 +291,15 @@ namespace pcs {
         bool checkErrors( const std::string& identifier = "" );
 
     }
+
+
+
+    /**
+     * Read a binary file as an ascii string.
+     *
+     * @param path The path to the file.
+     * @return The file contents.
+     */
+    std::string readFile( const std::string& path );
+
 }

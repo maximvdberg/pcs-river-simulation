@@ -24,15 +24,10 @@ void main() {
                     float(packDouble2x32(color_1.ba)));
 
     if (isWall) {
-        // o_color = vec4(1.0, 1.0, 1.0, 1.0);
-        // o_color = vec4(u_color.rg * length(u) * 4.0, 1.0, 1.0);
         o_color = vec4(251./255., 243./255., 239./255., 1.0);
     }
     else {
 
         o_color = vec4(u_color.rgb * length(u) * 4.0, u_color.a);
-        // o_color = vec4(color_2.g, color_2.g, color_2.g, u_color.a);
-
-        // o_color = vec4(u_color.rgb * rho * 0.2, u_color.a);
     }
 }

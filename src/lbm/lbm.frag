@@ -11,11 +11,10 @@ layout(location = 3) uniform usampler2D u_textures[7];
 layout(location = 10) uniform bvec4 u_settings;
 
 
-
+ #define ENABLE_FLOW
  #define ENABLE_SEDIMENTATION
  #define ENABLE_EROSION
  #define ENABLE_SLOPE
- #define ENABLE_FLOW
 
 
 // Some constants.
@@ -25,11 +24,12 @@ const double delta_t = 1.0;               // Time step
 double c = delta_x / delta_t;                // Lattice speed
 double omega =  2 / (6 * viscosity * delta_t
                      / (delta_x * delta_x) + 1);  // Parameter for "relaxation"
-const dvec2 u0 = dvec2(0.1,0.0);                // Initial in-flow speed
+const dvec2 u0 = dvec2(0.1, 0.0);                // Initial in-flow speed
 const double rho0 = 1.0;
 
+
 #ifdef ENABLE_SLOPE
-const dvec2 u_slope = dvec2(0.0,0.0);
+const dvec2 u_slope = dvec2(0.1, 0.0);
 #endif
 
 
@@ -117,7 +117,11 @@ void main() {
     const vec2 pixel_size = 1.0 / texture_size;
 
     // Copy the data like walls and such.
-    uvec4 data = texture(u_textures[0], v_tex_coords);
+    uvec4 gridData = texture(u_textures[0], v_tex_coords);
+    bool isIndestructible = gridData.r != 0;
+    bool addWall = gridData.g != 0;
+    bool isSource = gridData.b != 0;
+    bool isWall = gridData.a != 0;
 
     // Get the f values and stream at the same time.
     double f[9] = {
@@ -134,9 +138,9 @@ void main() {
 
 
     // Make the wall.
-    if (data.g != 0) {
-        data.g = 0;
-        data.a = 1;
+    if (addWall) {
+        isWall = true;
+        addWall = false;
 
         // Invert f_i's.
         for (uint i = 1; i < 9; i++) {
@@ -144,11 +148,9 @@ void main() {
         }
     }
 
-    bool isWall = data.a != 0;
-    bool isSource = data.b != 0;
 
-
-    if (isWall && !isSource) {
+    #ifdef ENABLE_EROSION
+    if (u_settings[1] && isWall && !isSource) {
 
         // Memory for force and bounce-back calculations.
         double phi[9] = {
@@ -162,8 +164,6 @@ void main() {
             get1f(u_textures[6], v_tex_coords), // f7
             get2f(u_textures[6], v_tex_coords)  // f8
         };
-
-        bool isIndestructible = data.r != 0;
 
         if (!isIndestructible) {
 
@@ -188,14 +188,14 @@ void main() {
             double press = length(F) * 1;
             // double press = length(u);
 
-            if (u_settings[1] && (ero(float(press) - 0.01) >
+            if ((ero(float(press) - 0.01) >
                                   rand(vec2(press*texture_loc)))) {
                 // Erosion, remove the wall
-                data.a = 0;
                 isWall = false;
             }
         }
     }
+    #endif
 
 
     // Calculate rho (the density) and u (the velocity vector).
@@ -205,16 +205,20 @@ void main() {
         rho += abs(f[i]);// * double(f[i] > 0);
         u += e[i] * abs(f[i]);// * double(f[i] > 0);
     }
-    u *= c / rho;
-
 
     #ifdef ENABLE_SLOPE
-    double u_len = length(u);
-    if (u_len > 0.0) {
+    if (u_settings[3] && !isWall && !isSource) {
+        double u_len = length(u);
         u += u_slope;
-        u *= u_len / length(u);
+
+        // Normalise the flow.
+        if (length(u) != 0.0) {
+            u *= u_len / length(u);
+        }
     }
     #endif
+    u *= c / rho;
+
 
 
     // Collision step: Interpolate f with feq
@@ -228,45 +232,45 @@ void main() {
     #ifdef ENABLE_SEDIMENTATION
     if (u_settings[2] && !isSource && !isWall &&
         sed(float(length(u))) > rand(vec2(u)*texture_loc) + 0.003) {
-        data.g = 1 ; // Add wall next step.
+        addWall = true; // Add wall next step.
     }
     #endif
 
     // Wall bounce back.
     if (isWall) {
 
-        // // Memory for force and bounce-back calculations.
-        // double f2[9] = {abs(f[0]), abs(f[1]), abs(f[2]),
-        //                 abs(f[3]), abs(f[4]), abs(f[5]),
-        //                 abs(f[6]), abs(f[7]), abs(f[8])};
+        // Memory for force and bounce-back calculations.
+        double f2[9] = {abs(f[0]), abs(f[1]), abs(f[2]),
+                        abs(f[3]), abs(f[4]), abs(f[5]),
+                        abs(f[6]), abs(f[7]), abs(f[8])};
 
-        // const double momentum_mod = 1.00;
+        const double momentum_mod = 1.00;
 
-        // // Bounce back
-        // f[2] = -f2[4] * momentum_mod; // N -> S
-        // f[3] = -f2[1] * momentum_mod; // W -> E
-        // f[4] = -f2[2] * momentum_mod; // S -> N
-        // f[1] = -f2[3] * momentum_mod; // E ->f2
-        // f[6] = -f2[8] * momentum_mod; // NW -> SE
-        // f[7] = -f2[5] * momentum_mod; // SW -> NE
-        // f[8] = -f2[6] * momentum_mod; // SE -> NW
-        // f[5] = -f2[7] * momentum_mod; // NE -> SW
+        // Bounce back
+        f[2] = -f2[4] * momentum_mod; // N -> S
+        f[3] = -f2[1] * momentum_mod; // W -> E
+        f[4] = -f2[2] * momentum_mod; // S -> N
+        f[1] = -f2[3] * momentum_mod; // E ->f2
+        f[6] = -f2[8] * momentum_mod; // NW -> SE
+        f[7] = -f2[5] * momentum_mod; // SW -> NE
+        f[8] = -f2[6] * momentum_mod; // SE -> NW
+        f[5] = -f2[7] * momentum_mod; // NE -> SW
 
 
         // Bounce back (old version)
-        double f2c = f[2]; // N
-        double f3c = f[3]; // W
-        double f6c = f[6]; // NW
-        double f7c = f[7]; // SW
+        // double f2c = f[2]; // N
+        // double f3c = f[3]; // W
+        // double f6c = f[6]; // NW
+        // double f7c = f[7]; // SW
 
-        f[2] = -abs(f[4]); // N -> S
-        f[3] = -abs(f[1]); // W -> E
-        f[4] = -abs(f2c);  // S -> N
-        f[1] = -abs(f3c);  // E -> W
-        f[6] = -abs(f[8]); // NW -> SE
-        f[7] = -abs(f[5]); // SW -> NE
-        f[8] = -abs(f6c);  // SE -> NW
-        f[5] = -abs(f7c);  // NE -> SW
+        // f[2] = -abs(f[4]); // N -> S
+        // f[3] = -abs(f[1]); // W -> E
+        // f[4] = -abs(f2c);  // S -> N
+        // f[1] = -abs(f3c);  // E -> W
+        // f[6] = -abs(f[8]); // NW -> SE
+        // f[7] = -abs(f[5]); // SW -> NE
+        // f[8] = -abs(f6c);  // SE -> NW
+        // f[5] = -abs(f7c);  // NE -> SW
 
         // const double p = 0.0;
         // const double q = 1 - p;
@@ -283,9 +287,8 @@ void main() {
 
     // Flow to the right.
     #ifdef ENABLE_FLOW
-    if (u_settings[0] && isSource && data.b != 0) {
-        u = u0; //dvec2(length(u),0) + u0;
-
+    if (u_settings[0] && isSource) {
+        u = u0;
         double udotu = dot(u, u);
 
         rho = rho0;
@@ -297,7 +300,7 @@ void main() {
 
 
     // Ouput to the textures.
-    o_color[0] = data;
+    o_color[0] = uvec4(isIndestructible, addWall, isSource, isWall);
     o_color[1] = uvec4(unpackDouble2x32(u.x),  unpackDouble2x32(u.y));
     o_color[2] = uvec4(unpackDouble2x32(rho),  unpackDouble2x32(f[0]));
     o_color[3] = uvec4(unpackDouble2x32(f[1]), unpackDouble2x32(f[2]));

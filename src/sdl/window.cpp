@@ -55,12 +55,11 @@ Window pcs::createOpenGLWindow( const std::string& title, int width, int height 
 
     // Create the OpenGL context.
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
-    // SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
-    // SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
-    // SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
-    // SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
                         SDL_GL_CONTEXT_PROFILE_CORE);
@@ -90,6 +89,7 @@ Window pcs::createOpenGLWindow( const std::string& title, int width, int height 
     else {
         // No vsync :o
         print(INFO_, "Unable to set VSync! SDL Error:", SDL_GetError());
+        SDL_GL_SetSwapInterval(0);
     }
 
     return window;
@@ -97,6 +97,8 @@ Window pcs::createOpenGLWindow( const std::string& title, int width, int height 
 
 
 void pcs::destroyWindow( Window& window ) {
+
+    // Destroy the render context and the window.
     SDL_GL_DeleteContext(window.glContext);
     SDL_DestroyWindow(window.sdlData);
 
