@@ -1,3 +1,13 @@
+/**
+ * Model setup and OpenGL communication.
+ * See lbm.hpp for details.
+ *
+ * @file lbm.cpp
+ * @author Jurriaan van den Berg
+ * @author Maxim van den Berg
+ * @author Melvin Seitner
+ * @date 15-01-2020
+ */
 
 #include "lbm.hpp"
 
@@ -10,13 +20,16 @@ static const double e_x[9] = {0., 1.,  0., -1., 0.,  1., -1., -1., 1.};
 static const double e_y[9] = {0., 0., 1., 0., -1., 1., 1.,  -1., -1.};
 static const double w[9] = {4./9., 1./9., 1./9., 1./9., 1./9.,
                             1./36., 1./36., 1./36., 1./36.};
+
+// System parameters.
 static const double delta_x = 1.0;                  // Lattice spacing
 static const double delta_t = 1.0;                  // Time step
 static const double c = delta_x / delta_t;
+
+// Starting values and functions.
 static const double rho = 1.0;
-
-
 static double calc_feq( int i, double u_x, double u_y ) {
+
     double udotu = u_x * u_x + u_y * u_y;
     double edotu_c = 3.0*(e_x[i]*u_x + e_y[i]*u_y) / c;
     return w[i] * rho * (1 + edotu_c + edotu_c*edotu_c / 2.0 -
@@ -29,13 +42,14 @@ LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer, const std::string& riv
     // Load the background texture file, which is the river configuration.
     backgroundTexture = gl::loadTexture(riverFile, &width, &height);
 
-    frame = 0;
+    framestep = 10;      // Amount of simulation frames between rendering
+    frame = 0;           // Frame counter
     paused = false;
 
     settings[0] = true;  // enable flow
     settings[1] = false; // enable corrosion
     settings[2] = false; // enable sedimentation
-    settings[3] = false; // switch wall visual
+    settings[3] = false; // enable slope
 
     screenX = screenY = 0.f;
     screenScale = 1.f;
@@ -68,19 +82,21 @@ LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer, const std::string& riv
     for (size_t i = 0; i < textureCount; ++i) {
         u_textures[i] = i + 3;
     }
-    u_settings = 10;// = u_textures[textureCount - 1] + 1;
+    u_settings = u_textures[textureCount - 1] + 1;
 
     // Program setup.
     for (GLuint program : programs) {
         renderer.useProgram(program);
+
         for (size_t i = 0; i < textureCount; ++i) {
             glUniform1i(u_textures[i], i);
         }
+
         renderer.setModelMatrix(0.f, 0.f, width, height);
         renderer.updateViewport(width, height);
     }
 
-    // Render some base.
+    // Rendering setup.
     renderer.resetProgram();
     renderer.updateViewport(width, height);
 
@@ -92,13 +108,13 @@ LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer, const std::string& riv
         }
     }
 
-
-    // Initialise the textures / f_i's.
+    // Initialise the textures and the  f_i values.
     double f_eq[10] = { 0.0 }; // <-- filler
     for (int i = 0; i < 9; i++) {
         f_eq[i+1] = calc_feq(i, 0.0, 0.0);
         print(f_eq[i+1]);
     }
+
     glBindFramebuffer(GL_FRAMEBUFFER, buffers[0].fbo);
     for (uint i = 0; i < 5; ++i) {
         glClearBufferuiv(GL_COLOR, i + 2, (GLuint*) &f_eq[i*2]);
@@ -114,6 +130,7 @@ LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer, const std::string& riv
 }
 
 void LatticeBoltzmann::close() {
+
     for (Buffers& buff : buffers) {
         glDeleteTextures(textureCount, buff.texture);
         glDeleteFramebuffers(1, &buff.fbo);
@@ -122,22 +139,6 @@ void LatticeBoltzmann::close() {
     for (GLuint program : programs) {
         glDeleteProgram(program);
     }
-}
-
-void LatticeBoltzmann::renderWall( GLRenderer& renderer, GLuint texture, int posX, int posY,
-                                   int width, int height ) {
-
-    renderer.renderToTexture(buffers[0].texture[0]);
-    renderer.setRenderColor(1.f, 0.f, 0.f, 0.f);
-    renderer.renderTexture(texture, posX, posY, width, height);
-}
-
-void LatticeBoltzmann::renderFlow( GLRenderer& renderer, GLuint texture, int posX, int posY,
-                                   int width, int height ) {
-
-    renderer.renderToTexture(buffers[0].texture[0]);
-    renderer.setRenderColor(0.f, 1.f, 0.f, 0.f);
-    renderer.renderTexture(texture, posX, posY, width, height);
 }
 
 void LatticeBoltzmann::handleInput( GLRenderer& renderer, InputData& input ) {
@@ -171,32 +172,24 @@ void LatticeBoltzmann::handleInput( GLRenderer& renderer, InputData& input ) {
         runFrame = true;
     }
 
-
-    // Add flow.
-    if (input.keyMap[SDL_SCANCODE_S] == 2) {
-        renderFlow(renderer, renderer.getBlankTexture(), 1, height/2-100, 1, 200);
-    }
-
-    // Rerender the background.
+    // Rerender the background, to restore starting walls.
     if (input.keyMap[SDL_SCANCODE_O] == 2) {
-        //renderWall(renderer, backgroundTexture, 0, 0, width, height);
         renderer.renderToTexture(buffers[0].texture[0]);
         renderer.setRenderColor(1.0f, 1.0f, 1.0f, 0.0f);
         renderer.renderTexture(backgroundTexture, 0, 0, width, height);
-
     }
 
+    // Update flow settings
     int settingsCodes[4] = {SDL_SCANCODE_Q, SDL_SCANCODE_W, SDL_SCANCODE_E, SDL_SCANCODE_R};
     for (int i = 0; i < 4; ++i) {
         if (input.keyMap[settingsCodes[i]] == 2)
             settings[i] = !settings[i];
     }
+
     // Enable both corrosion and sedimentation.
     if (input.keyMap[SDL_SCANCODE_T] == 2) {
         settings[1] = settings[2] = true;
     }
-
-
 }
 
 void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
@@ -212,10 +205,11 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
 
         glUniform4i(u_settings, settings[0], settings[1], settings[2], settings[3]);
 
-        for (unsigned i = 0; i < 5; ++i) {
+        // Run for `framestep` amount of frames.
+        for (unsigned i = 0; i < framestep; ++i) {
 
             // Bind the textures from which we render, and bind to
-            // framebuffer to which we rander.
+            // framebuffer to which we render.
             glBindTextures(0, 7, buffers[frame % 2].texture);
             glBindFramebuffer(GL_FRAMEBUFFER, buffers[(frame + 1) % 2].fbo);
 
@@ -224,7 +218,6 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
 
             ++frame;
         }
-
 
         // Render the results.
         renderer.resetProgram();
@@ -235,48 +228,17 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
     renderer.renderToScreen();
     renderer.updateViewport(windowWidth, windowHeight);
 
+    // Render the main simulation viewport.
+    renderer.useProgram(programs[1]);
+    renderer.updateViewport(windowWidth, windowHeight);
 
-    constexpr bool debugRender = true;
-    if (debugRender) {
-        float posX = 10.f, posY = 600.f;
-        renderer.setRenderColor(1.f, 1.f, 1.f, 1.f);
-        renderer.renderTexture(buffers[frame % 2].texture[0],
-                            posX, posY, width, height);
+    renderer.setRenderColor(1.f, 1.f, 1.f, 1.f);
+    glBindTextures(0, 3, buffers[frame % 2].texture);
+    renderer.setModelMatrix(screenX, screenY,
+                            width * screenScale, height * screenScale);
 
-        posX = 1100.f; posY = 10.f;
-        renderer.setRenderColor(1.f, 1.f, 1.f, 1.f);
-        renderer.renderTexture(buffers[frame % 2].texture[1],
-                            posX, posY, width, height);
-
-        posX = 1100.f; posY = 600.f;
-        renderer.setRenderColor(1.f, 1.f, 1.f, 1.f);
-        renderer.renderTexture(buffers[frame % 2].texture[2],
-                            posX, posY, width, height);
-
-    }
-
-    if (true) {
-        // Visualise the output
-        renderer.useProgram(programs[1]);
-        renderer.updateViewport(windowWidth, windowHeight);
-        renderer.setRenderColor(1.f, 1.f, 1.f, 1.f);
-        glBindTextures(0, 3, buffers[frame % 2].texture);
-        renderer.setModelMatrix(screenX, screenY,
-                                width * screenScale, height * screenScale);
-        renderer.renderModel(renderer.getSquareModel());
-
-        // renderer.setModelMatrix(width, 0.f, width, height);
-        // renderer.renderModel(renderer.getSquareModel());
-        // renderer.setModelMatrix(0.f, height, width, height);
-        // renderer.renderModel(renderer.getSquareModel());
-
-        renderer.resetProgram();
-
-        // renderer.setRenderColor(1.f, 1.f, 1.f, 1.f);
-        // renderer.renderTexture(backgroundTexture, 0, 0, width, height);
-
-        // renderer.se
-    }
+    renderer.renderModel(renderer.getSquareModel());
+    renderer.resetProgram();
 
     // Render the cursor.
     if (cursorX >= 0 && cursorX < width &&
@@ -308,39 +270,37 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
 
 
 void LatticeBoltzmann::readPixels( GLRenderer& renderer, InputData& input ) {
-    // Some debug stuff, please ignore.
 
     bool posChanged = false;
 
+    // Remove pointer.
     if (input.keyMap[SDL_BUTTON_RIGHT] == 2) {
         cursorX = cursorY = -1;
     }
 
+    // Place pointer.
     if (input.keyMap[SDL_BUTTON_LEFT] == 1) {
         cursorX = (input.cursorX - screenX) / screenScale;
         cursorY = (input.cursorY - screenY)  / screenScale;
         posChanged = true;
     }
 
-
+    // Gather the information at the pointer's position.
     if (cursorX >= 0 && cursorX < width &&
         cursorY >= 0 && cursorY < height &&
         (input.keyMap[SDL_SCANCODE_V] > 0 || posChanged)) {
 
-        // glBindTextures(0, 7, buffers[frame % 2].texture);
-        // glBindFramebuffer(GL_READ_FRAMEBUFFER, buffers[(frame) % 2].fbo);
         const Buffers& buf = buffers[frame % 2];
         glBindFramebuffer(GL_FRAMEBUFFER, buf.fbo);
 
+        // Get the tile information (flags for source, walls, etc.).
         unsigned data[4];
-        double vals[12]; // ux, uy, rho, f[9]
-
-        // Get the data (contains walls and such).
         glReadBuffer(GL_COLOR_ATTACHMENT0);
         glReadPixels(cursorX, cursorY, 1, 1, GL_RGBA_INTEGER,
                      GL_UNSIGNED_INT, &data);
 
-        // Get the double values.
+         // Get the values for u_x, u_y, rho and all f_i's
+        double vals[12];
         for (int i = 0; i < textureCount - 1; ++i) {
             glReadBuffer(GL_COLOR_ATTACHMENT1 + i);
             glReadPixels(cursorX, cursorY, 1, 1, GL_RGBA_INTEGER,
@@ -349,11 +309,12 @@ void LatticeBoltzmann::readPixels( GLRenderer& renderer, InputData& input ) {
 
         int dw = 12;
 
+        // Begin outputting the information to the terminal.
         std::cout << "------- Sherlock Data --------" << std::endl;
         std::cout << "location: " << std::setw(5) << toString(cursorX)
                   << ", " << std::setw(5) << toString(cursorY) << std::endl;
 
-        // Output data.
+        // Output tile data.
         std::cout << "data: ";
         for (unsigned u : data) std::cout << std::setw(dw) << toString(u);
         std::cout << std::endl;
@@ -362,13 +323,13 @@ void LatticeBoltzmann::readPixels( GLRenderer& renderer, InputData& input ) {
         std::cout << "u   = (" << std::setw(dw) << toString(vals[0])
                   << ", " << std::setw(dw) << toString(vals[1])
                   << ")" << std::endl;
-        std::cout << "u2  = " << std::setw(dw)
+        std::cout << "|u| = "
                   << toString(std::sqrt(vals[0]*vals[0] +
                                         vals[1]*vals[1])) << std::endl;
         std::cout << "rho =  " << std::setw(dw) << toString(vals[2])
                   << std::endl;
 
-        // Output f values.
+        // Output the f values.
         std::cout << "f values:";
         int j = 0;
         for (int i : {6,2,5,3,0,1,7,4,8}) {
@@ -382,35 +343,71 @@ void LatticeBoltzmann::readPixels( GLRenderer& renderer, InputData& input ) {
     }
 
 
-
+    // Display the rightward momentum of all non-wall
+    // tiles in the vertical line through the cursor.
     if (input.keyMap[SDL_SCANCODE_X] == 2) {
         const Buffers& buf = buffers[frame % 2];
         glBindFramebuffer(GL_FRAMEBUFFER, buf.fbo);
 
         unsigned data[4];
-        double u[2]; // ux, uy, rho, f[9]
+        double u[2];
 
         std::cout << "[";
         for (int y = 0; y < height; y++) {
 
-            // Get the data (contains walls and such).
+            // Get the tile data (to find walls).
             glReadBuffer(GL_COLOR_ATTACHMENT0);
             glReadPixels(cursorX, y, 1, 1, GL_RGBA_INTEGER,
                          GL_UNSIGNED_INT, &data);
 
+            // Get the data for u.
             glReadBuffer(GL_COLOR_ATTACHMENT1);
             glReadPixels(cursorX, y, 1, 1, GL_RGBA_INTEGER,
                          GL_UNSIGNED_INT, &u[0]);
 
-
+            // Display the x component of u.
             if (data[3] == 0) {
-                //std::cout << toString(std::sqrt(u[0]*u[0] + u[1]*u[1])) << ", ";
                 std::cout << toString(u[0]) << ", ";
             }
-
         }
+
         std::cout << "]" << std::endl << std::endl;
+
+        // Bind back to the screen framebuffer.
         renderer.renderToScreen();
     }
 
+    // Display the upward momentum of all non-wall
+    // tiles in the horizontal line through the cursor.
+    if (input.keyMap[SDL_SCANCODE_Y] == 2) {
+        const Buffers& buf = buffers[frame % 2];
+        glBindFramebuffer(GL_FRAMEBUFFER, buf.fbo);
+
+        unsigned data[4];
+        double u[2];
+
+        std::cout << "[";
+        for (int x = 0; x < width; x++) {
+
+            // Get the tile data (to find walls).
+            glReadBuffer(GL_COLOR_ATTACHMENT0);
+            glReadPixels(x, cursorY, 1, 1, GL_RGBA_INTEGER,
+                         GL_UNSIGNED_INT, &data);
+
+            // Get the data for u.
+            glReadBuffer(GL_COLOR_ATTACHMENT1);
+            glReadPixels(x, cursorY, 1, 1, GL_RGBA_INTEGER,
+                         GL_UNSIGNED_INT, &u[0]);
+
+            // Display the y component of u.
+            if (data[3] == 0) {
+                std::cout << toString(u[1]) << ", ";
+            }
+        }
+
+        std::cout << "]" << std::endl << std::endl;
+
+        // Bind back to the screen framebuffer.
+        renderer.renderToScreen();
+    }
 }
