@@ -61,7 +61,7 @@ print(popt, pcov)
 #plt.rcParams['axes.facecolor'] = (0.98431, 0.952941, 0.937254)
 
 plt.plot(u2, x, label="LBM")
-plt.plot(f(x, *popt), x, linestyle='--', label="Theortical")
+plt.plot(f(x, *popt), x, linestyle='--', label="Theoretical")
 plt.grid()
 plt.legend()
 plt.ylabel("y position (m)")
@@ -71,7 +71,7 @@ plt.ylim(x[0], x[-1])
 
 plt.tight_layout()
 
-plt.savefig('poiseuille.png', transparent=True)
+plt.savefig('poiseuille.png', dpi=500, transparent=True)
 plt.show()
 
 

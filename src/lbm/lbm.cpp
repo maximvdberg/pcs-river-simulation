@@ -1,6 +1,7 @@
 
 #include "lbm.hpp"
-#include "../misc.hpp"
+
+#include "../print.hpp"
 
 using namespace pcs;
 
@@ -31,7 +32,7 @@ LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer, const std::string& riv
     frame = 0;
     paused = false;
 
-    settings[0] = false; // enable flow
+    settings[0] = true;  // enable flow
     settings[1] = false; // enable corrosion
     settings[2] = false; // enable sedimentation
     settings[3] = false; // switch wall visual
@@ -58,10 +59,10 @@ LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer, const std::string& riv
         glDrawBuffers(textureCount, drawBuffers);
     }
 
-    programs[0] = gl::compileProgram(loadFile("src/opengl/main.vert"),
-                                     loadFile("src/lbm/lbm.frag"));
-    programs[1] = gl::compileProgram(loadFile("src/opengl/main.vert"),
-                                     loadFile("src/lbm/visual.frag"));
+    programs[0] = gl::compileProgram(readFile("src/opengl/main.vert"),
+                                     readFile("src/lbm/lbm.frag"));
+    programs[1] = gl::compileProgram(readFile("src/opengl/main.vert"),
+                                     readFile("src/lbm/visual.frag"));
 
     // These uniform locations are defined in the program using layout().
     for (size_t i = 0; i < textureCount; ++i) {
@@ -109,7 +110,7 @@ LatticeBoltzmann::LatticeBoltzmann( GLRenderer& renderer, const std::string& riv
 
     renderer.renderToScreen();
 
-    gl::checkErrors("CA init");
+    gl::checkErrors("LBM initialise");
 }
 
 void LatticeBoltzmann::close() {
@@ -301,7 +302,7 @@ void LatticeBoltzmann::update( GLRenderer& renderer, InputData& input,
         }
     }
 
-    gl::checkErrors("CA end");
+    gl::checkErrors("LBM end of update");
 }
 
 

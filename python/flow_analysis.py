@@ -32,24 +32,25 @@ u5 = [0.00838822, 0.0175264, 0.0263467, 0.034825, 0.0429384, 0.0506668, 0.057993
 u5 = [0.00838847, 0.0175243, 0.0263427, 0.0348195, 0.0429319, 0.0506598, 0.0579862, 0.0648983, 0.0713874, 0.0774494, 0.0830845, 0.0882966, 0.0930927, 0.0974823, 0.101477, 0.10509, 0.108334, 0.111224, 0.113774, 0.115999, 0.117911, 0.119525, 0.120853, 0.121905, 0.122693, 0.123224, 0.123507, 0.123548, 0.123351, 0.122921, 0.12226, 0.121369, 0.120247, 0.118893, 0.117305, 0.11548, 0.113413, 0.1111, 0.108536, 0.105715, 0.102631, 0.0992795, 0.0956553, 0.0917539, 0.0875713, 0.0831046, 0.0783511, 0.0733088, 0.0679759, 0.0623504, 0.0564297, 0.0502106, 0.0436885, 0.036858, 0.0297121, 0.0222428, 0.0144403, 0.00629387, ]
 
 
-fig = plt.figure(figsize=(5,6))
+fig = plt.figure(figsize=(5.5,4.0))
 
 toPlot = list(reversed([(u2, 0.005), (u1, 0.01), (u4, 0.05), (u5, 0.1)]))
 
 x = range(len(toPlot[-1][0]))
 
-lims = (0.0, max(u5)*1.1)
-plt.hlines((x[-1] - x[0]) / 2, *lims, color='gray', linestyle="--")
-plt.xlim(*lims)
+lims = (0.0, max(u5)*1.2)
+# plt.hlines((x[-1] - x[0]) / 2, *lims, color='gray', linestyle="--")
+plt.ylim(*lims)
+plt.xlim(0, x[-1])
 
 for l, v in toPlot:
-    plt.plot(l, x, label=f"$\\nu={v}$")
+    plt.plot(x[-1] - np.array(x), l, label=f"$\\nu={v}$")
 
 
 plt.grid()
 plt.legend()
-plt.ylabel("y position (m)");
-plt.xlabel("Horizontal velocity (m s$^{-1}$)");
+plt.xlabel("x position (m)");
+plt.ylabel("Horizontal velocity (m s$^{-1}$)");
 
-plt.savefig('omega_flow.png', transparent=True)
+plt.savefig('omega_flow.png', transparent=True, dpi=500)
 plt.show()

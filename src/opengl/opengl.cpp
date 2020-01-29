@@ -13,8 +13,6 @@
 
 #include "../print.hpp"
 
-using namespace pcs;
-
 #include <sstream>
 #include <fstream>
 
@@ -22,25 +20,14 @@ using namespace pcs;
 #include <SDL2/SDL_image.h>
 
 
-std::string loadFile( const std::string& path ) {
-    std::ifstream file(path);
-    std::stringstream buffer;
-    if (file) {
-        buffer << file.rdbuf();
-        return buffer.str();
-    }
-    else {
-        print(INFO_, "file", path, "does not exists!");
-        return "";
-    }
-}
+using namespace pcs;
 
 
 GLRenderer::GLRenderer() {
 
     // Compile the rendering program.
-    program = gl::compileProgram(loadFile("src/opengl/main.vert"),
-                                 loadFile("src/opengl/main.frag"));
+    program = gl::compileProgram(readFile("src/opengl/main.vert"),
+                                 readFile("src/opengl/main.frag"));
 
     // Bind the attribute and uniform locations of the program, so
     // that we can edit them from C++.
@@ -60,10 +47,10 @@ GLRenderer::GLRenderer() {
     // Generate a 1x1 blank texture, used for rendering texturesless rects.
     blankTexture = gl::genTexture(1, 1, (float[]) {1.0f, 1.0f, 1.0f, 1.0f});
 
-    // Create a square model used for rendering simple textures.
+    // Create a square model used for rendering simple textured squares.
     glGenVertexArrays(1, &squareModel.vao);
     glBindVertexArray(squareModel.vao);
-    constexpr size_t fSize = sizeof (GLfloat);
+    constexpr size_t fSize = sizeof (GLfloat); // Size of float shortcut
     GLfloat vertices[20] = {0.f, 0.f, 0.0f, 0.f, 0.f,
                             1.f, 0.f, 0.0f, 1.f, 0.f,
                             1.f, 1.f, 0.0f, 1.f, 1.f,
@@ -289,9 +276,11 @@ GLuint gl::genTexture( int width, int height, const float* data ) {
     glGenTextures(1, &textureId);
     glBindTexture(GL_TEXTURE_2D, textureId);
 
-    // Set some texture parameters.
+    // Set the textures to repeat (e.g. periodic boundary conditions).
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    // Disable pixel interpolation.
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
@@ -301,41 +290,30 @@ GLuint gl::genTexture( int width, int height, const float* data ) {
 
     // Unbind the texture.
     glBindTexture(GL_TEXTURE_2D, 0);
-
-    if (glGetError() == GL_OUT_OF_MEMORY)  {
-        print(INFO_, "Out of texture memory!");
-        glDeleteTextures(1, &textureId);
-        return 0;
-    }
     return textureId;
 }
 
-GLuint gl::genUTexture( int width, int height, const uint8_t* data ) {
+GLuint gl::genUTexture( int width, int height, const uint32_t* data ) {
 
     // Generate the texture and bind it.
     GLuint textureId;
     glGenTextures(1, &textureId);
     glBindTexture(GL_TEXTURE_2D, textureId);
 
-    // Set some texture parameters.
+    // Set the textures to repeat (e.g. periodic boundary conditions).
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    // Disable pixel interpolation.
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
     // Send the image to OpenGL.
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32UI, width, height, 0,
-                 GL_RGBA_INTEGER, GL_UNSIGNED_INT, nullptr);
-    //GL_RGBA32F
+                 GL_RGBA_INTEGER, GL_UNSIGNED_INT, data);
 
     // Unbind the texture.
     glBindTexture(GL_TEXTURE_2D, 0);
-
-    if (glGetError() == GL_OUT_OF_MEMORY)  {
-        glDeleteTextures(1, &textureId);
-        print(INFO_, "Out of texture memory!");
-        return 0;
-    }
     return textureId;
 }
 
@@ -343,66 +321,45 @@ GLuint gl::genUTexture( int width, int height, const uint8_t* data ) {
 GLuint gl::loadTexture( const std::string& filePath,
                         int* widthPtr, int* heightPtr ) {
 
-    std::ifstream file(filePath);
-    if (!file) {
-        print(INFO_, "File", filePath, "does not exists!", lflush());
+
+    // Load the image using SDL_Image.
+    SDL_Surface* load = IMG_Load(filePath.c_str());
+    if (load == nullptr) {
+        print(INFO_, "Failed to load the texture at", "["+filePath+"]", "! Does it exists?");
         return 0;
     }
-    file.close();
 
+    // Convert the image to a format we can easily use.
+    SDL_Surface* source = SDL_ConvertSurfaceFormat(load,
+                                                SDL_PIXELFORMAT_ABGR8888, 0);
+    SDL_FreeSurface(load);
 
-    SDL_Surface* surface = IMG_Load(filePath.c_str());
+    const int width = source->w;
+    const int height = source->h;
+    const int cpp = 4; // Color per pixel.
 
-    int width = surface->w;
-    int height = surface->h;
-    int bpp = surface->format->BytesPerPixel;
+    // Create a place to store our pixels.
+    float* const pixels = new float[height * width * cpp];
+    float* activePixel = pixels;
 
-    float* pixels = new float[height*width*4];
-    float* dstPixel = pixels;
+    // Invert the source pixels and convert them to floats.
+    SDL_LockSurface(source);
+    uint8_t* const sourcePixel = (uint8_t*) source->pixels;
 
-    SDL_LockSurface(surface);
-
-    int y, x;
-    uint8_t* srcPixel;
-    uint32_t truePixel;
-
-    for (y = height - 1; y >= 0; y--) {
-        for (x = 0; x < width; x++) {
-            srcPixel = (uint8_t*) surface->pixels + y * surface->pitch + x * bpp;
-
-            switch (bpp) {
-            case 1:
-                truePixel = *srcPixel;
-                break;
-            case 2:
-                truePixel = *(uint16_t*) srcPixel;
-                break;
-            case 3:
-                if (SDL_BYTEORDER == SDL_BIG_ENDIAN) {
-                    truePixel = srcPixel[0] << 16 | srcPixel[1] << 8 | srcPixel[2];
-                } else {
-                    truePixel = srcPixel[0] | srcPixel[1] << 8 | srcPixel[2] << 16;
-                }
-                break;
-            case 4:
-                truePixel = *(uint32_t*) srcPixel;
-                break;
-            default:
-                break;
-            }
-
-            //TODO: remove this, it's slow.
-            uint8_t pxls[4];
-            SDL_GetRGBA(truePixel, surface->format, &pxls[0], &pxls[1], &pxls[2], &pxls[3]);
-
-            for (uint8_t p : pxls) {
-                *dstPixel = (float) p / 255.f;
-                dstPixel++;
+    for (int y = height - 1; y >= 0; y--) {
+        for (int x = 0; x < width; x++) {
+            for (int p = 0; p < cpp; p++) {
+                uint8_t& v = sourcePixel[x * cpp + y * source->pitch + p];
+                *(activePixel++) = (float) v / 255.f;
             }
         }
     }
 
-    SDL_UnlockSurface(surface);
+    // Delete the surface, as we have read all its pixels.
+    SDL_UnlockSurface(source);
+    SDL_FreeSurface(source);
+
+    // Create the texture using the acquired pixel data.
     GLuint texture = gl::genTexture(width, height, pixels);
     delete[] pixels;
 
@@ -421,12 +378,12 @@ bool gl::checkErrors( const std::string& identifier ) {
     bool errorOccured = false;
 
     // Poll and print all the errors that may have occured.
-    GLenum glerror;
-    while ((glerror = glGetError()) != GL_NO_ERROR) {
+    GLenum errorCode;
+    while ((errorCode = glGetError()) != GL_NO_ERROR) {
         std::string errorType = "[unknown]";
 
         // Get the error type.
-        switch (glerror) {
+        switch (errorCode) {
         case GL_INVALID_ENUM:
             errorType = "INVALID_ENUM";
             break;
@@ -456,9 +413,27 @@ bool gl::checkErrors( const std::string& identifier ) {
         }
 
         // Print the error.
-        print("GL ERROR ", identifier, "of type", errorType, "(id:", glerror, ")");
+        print("GL ERROR ", identifier, "of type", errorType, "(id:", errorCode, ")");
         errorOccured = true;
     }
 
     return errorOccured;
+}
+
+
+std::string pcs::readFile( const std::string& path ) {
+
+    // Open the file and create a buffer to read it.
+    std::ifstream file(path);
+    std::stringstream buffer;
+
+    // Read the file if it exists, and print an warning otherwise.
+    if (file) {
+        buffer << file.rdbuf();
+        return buffer.str();
+    }
+    else {
+        print(INFO_, "file", path, "does not exists!");
+        return "";
+    }
 }

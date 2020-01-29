@@ -36,10 +36,10 @@ layout(location = 10) uniform bvec4 u_settings;
  */
 
 
-//  #define ENABLE_SEDIMENTATION
-//  #define ENABLE_EROSION
- #define ENABLE_SLOPE
  #define ENABLE_FLOW
+ #define ENABLE_SEDIMENTATION
+ #define ENABLE_EROSION
+//  #define ENABLE_SLOPE
 
 
 // Some constants.
@@ -142,7 +142,11 @@ void main() {
     const vec2 pixel_size = 1.0 / texture_size;
 
     // Copy the data like walls and such.
-    uvec4 data = texture(u_textures[0], v_tex_coords);
+    uvec4 gridData = texture(u_textures[0], v_tex_coords);
+    bool isIndestructible = gridData.r != 0;
+    bool addWall = gridData.g != 0;
+    bool isSource = gridData.b != 0;
+    bool isWall = gridData.a != 0;
 
     // Get the f values and stream at the same time.
     double f[9] = {
@@ -159,9 +163,9 @@ void main() {
 
 
     // Make the wall.
-    if (data.g != 0) {
-        data.g = 0;
-        data.a = 1;
+    if (addWall) {
+        isWall = true;
+        addWall = false;
 
         // Invert f_i's.
         for (uint i = 1; i < 9; i++) {
@@ -169,8 +173,6 @@ void main() {
         }
     }
 
-    bool isWall = data.a != 0;
-    bool isSource = data.b != 0;
 
     #ifdef ENABLE_EROSION
     if (u_settings[1] && isWall && !isSource) {
@@ -187,8 +189,6 @@ void main() {
             get1f(u_textures[6], v_tex_coords), // f7
             get2f(u_textures[6], v_tex_coords)  // f8
         };
-
-        bool isIndestructible = data.r != 0;
 
         if (!isIndestructible) {
 
@@ -216,7 +216,6 @@ void main() {
             if ((ero(float(press) - 0.01) >
                                   rand(vec2(press*texture_loc)))) {
                 // Erosion, remove the wall
-                data.a = 0;
                 isWall = false;
             }
         }
@@ -254,7 +253,7 @@ void main() {
     #ifdef ENABLE_SEDIMENTATION
     if (u_settings[2] && !isSource && !isWall &&
         sed(float(length(u))) > rand(vec2(u)*texture_loc) + 0.003) {
-        data.g = 1 ; // Add wall next step.
+        addWall = true; // Add wall next step.
     }
     #endif
 
@@ -309,9 +308,8 @@ void main() {
 
     // Flow to the right.
     #ifdef ENABLE_FLOW
-    if (u_settings[0] && isSource && data.b != 0) {
-        u = u0; //dvec2(length(u),0) + u0;
-
+    if (u_settings[0] && isSource) {
+        u = u0;
         double udotu = dot(u, u);
 
         rho = rho0;
@@ -323,7 +321,7 @@ void main() {
 
 
     // Ouput to the textures.
-    o_color[0] = data;
+    o_color[0] = uvec4(isIndestructible, addWall, isSource, isWall);
     o_color[1] = uvec4(unpackDouble2x32(u.x),  unpackDouble2x32(u.y));
     o_color[2] = uvec4(unpackDouble2x32(rho),  unpackDouble2x32(f[0]));
     o_color[3] = uvec4(unpackDouble2x32(f[1]), unpackDouble2x32(f[2]));
